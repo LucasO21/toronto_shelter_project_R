@@ -1,0 +1,10 @@
+.Rproj.user
+.Rhistory
+.RData
+.Ruserdata
+/artifacts
+/data
+/archive
+/qmd/00_extract_raw_shelter_data_files
+*.html
+.DS_Store
