@@ -111,14 +111,14 @@ and start time, aiding in monitoring and debugging.
 Upload 2022 data. Again this is a one time upload. 
 
 ```{r upload_shelter_data_2022}
-
-# 2022 data (one time upload)
+# 
+# # 2022 data (one time upload)
 # get_bigquery_upload(
 #     values  = daily_shelter_2022_tbl,
 #     project = "toronto-shelter-project",
 #     dataset = "data_raw",
-#     table   = "raw_data_2022",
-#     
+#     table   = "raw_shelter_2022",
+# 
 # )
 
 ```
@@ -127,7 +127,7 @@ Upload 2022 data. Again this is a one time upload.
 
 ## Load 2023 Data (On Going)
 
-Uploade 2023 data. Again this is a one time upload. 
+Upload 2023 data. Again this is a one time upload. 
 
 ```{r, upload_shelter_data_2023, message=TRUE}
 
@@ -136,7 +136,7 @@ get_bigquery_upload(
     values  = daily_shelter_2023_tbl,
     project = "toronto-shelter-project",
     dataset = "data_raw",
-    table   = "raw_data_2023",
+    table   = "raw_shelter_2023",
     
 )
 

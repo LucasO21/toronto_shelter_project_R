@@ -19,6 +19,8 @@ library(bigrquery)
 # MODULES ----
 # *****************************************************************************
 
+"https://bigrquery.r-dbi.org/reference/api-perform.html"
+
 # * Extract Shelter Data ----
 get_shelter_data <- function(slice = 1) {
     
@@ -38,12 +40,32 @@ get_shelter_data <- function(slice = 1) {
     return(ret)
 }
 
+test_tbl <- get_shelter_data() %>% distinct() 
+
+
+# * Big Query Connection ----
+get_bigquery_connection <- function (project = "toronto-shelter-data",
+                               dataset = "data_raw") {
+    
+    # Connect to BigQuery
+    con <- DBI::dbConnect(
+        bigrquery::bigquery(),
+        project = project,
+        dataset = dataset,
+        billing = project  
+    )
+    
+    return(con)
+}
+
+con <- get_bigquery_connection()
+
 
 # * Load to Big Query ----
-get_bigquery_upload <- function(values, project = "toronto-shelter-project", 
-                               dataset = "data_raw", 
-                               table, create_disposition = "CREATE_IF_NEEDED",
-                               write_disposition = "WRITE_TRUNCATE") {
+get_bigquery_upload <- function(project = "toronto-shelter-project", 
+                                dataset = "data_raw", table = NULL,
+                                create_disposition = "CREATE_IF_NEEDED",
+                                write_disposition = "WRITE_TRUNCATE") {
     
     # Validate parameters
     stopifnot(
@@ -54,27 +76,20 @@ get_bigquery_upload <- function(values, project = "toronto-shelter-project",
         is.character(create_disposition), length(create_disposition) == 1
     )
     
-    # Connect to BigQuery
-    con <- DBI::dbConnect(
-        bigrquery::bigquery(),
-        project = project,
-        dataset = dataset,
-        billing = project  # Assuming billing to the same project, adjust if different
-    )
-    
     # Perform upload
     job <- bigrquery::insert_upload_job(
         values  = values,
         project = project,
         dataset = dataset,
         table   = table,
-        create_disposition = create_disposition
+        create_disposition = create_disposition,
+        write_disposition  = write_disposition
     )
     
     # Message
     job_time <- tibble(
         creation_time = as.numeric(job$statistics$creationTime),
-        start_time = as.numeric(job$statistics$startTime)
+        start_time    = as.numeric(job$statistics$startTime)
     ) %>% 
         mutate(creation_time = as.POSIXct(creation_time / 1000, origin = "1970-01-01", tz = "America/New_York") + 2*3600) %>% 
         mutate(start_time = as.POSIXct(start_time / 1000, origin = "1970-01-01", tz = "America/New_York") + 2*3600)
@@ -93,36 +108,6 @@ get_bigquery_upload <- function(values, project = "toronto-shelter-project",
     
     # return(job)
 }
-
-# test_tbl <- get_shelter_data(slice = 3) %>% head(5)
-# 
-# get_bigquery_upload(values = test_tbl, table = "test")
-
-test_tbl <- get_shelter_data(slice = 1) %>% tail(5)
-
-
-# *****************************************************************************
-# **** ----
-# DATA FORMATTING ----
-# *****************************************************************************
-
-# * Data Formatting ----
-daily_shelter_formmatted_tbl <- daily_shelter_tbl %>%
-    dtplyr::lazy_dt() %>%
-    filter(str_detect(str_to_lower(capacity_type), "room")) %>%
-    select(-ends_with("bed"), -ends_with("beds")) %>%
-    rename_with(~str_remove_all(.x, "_room"), ends_with("room")) %>%
-    rename_with(~str_remove_all(.x, "_rooms"), ends_with("rooms")) %>%
-    as_tibble() %>%
-    bind_rows(
-        daily_shelter_tbl %>%
-            dtplyr::lazy_dt() %>%
-            filter(str_detect(str_to_lower(capacity_type), "bed")) %>%
-            select(-ends_with("room"), -ends_with("rooms")) %>%
-            rename_with(~str_remove_all(.x, "_bed"), ends_with("bed")) %>%
-            rename_with(~str_remove_all(.x, "_beds"), ends_with("beds")) %>%
-            as_tibble()
-    )
 
 
 # *****************************************************************************
@@ -177,7 +162,7 @@ daily_shelter_formmatted_tbl <- daily_shelter_tbl %>%
 
 # * Save Modules ----
 dump(
-    list   = c("get_shelter_data", "get_bigquery_upload"),
+    list   = c("get_shelter_data", "get_bigquery_upload", "get_bigquery_connection"),
     file   = "../functions/extract_shelter_data.R",
     append = FALSE
 )

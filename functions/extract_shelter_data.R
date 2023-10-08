@@ -17,7 +17,7 @@ function(slice = 1) {
     return(ret)
 }
 get_bigquery_upload <-
-function(values, project = "toronto-shelter-project", 
+function(con, values, project = "toronto-shelter-project", 
                                dataset = "data_raw", 
                                table, create_disposition = "CREATE_IF_NEEDED",
                                write_disposition = "WRITE_TRUNCATE") {
@@ -31,13 +31,7 @@ function(values, project = "toronto-shelter-project",
         is.character(create_disposition), length(create_disposition) == 1
     )
     
-    # Connect to BigQuery
-    con <- DBI::dbConnect(
-        bigrquery::bigquery(),
-        project = project,
-        dataset = dataset,
-        billing = project  # Assuming billing to the same project, adjust if different
-    )
+  
     
     # Perform upload
     job <- bigrquery::insert_upload_job(
@@ -56,7 +50,7 @@ function(values, project = "toronto-shelter-project",
         mutate(creation_time = as.POSIXct(creation_time / 1000, origin = "1970-01-01", tz = "America/New_York") + 2*3600) %>% 
         mutate(start_time = as.POSIXct(start_time / 1000, origin = "1970-01-01", tz = "America/New_York") + 2*3600)
 
-    message(
+    msg <- message(
         stringr::str_glue(
             "
             Job Status: {job$status}
@@ -69,4 +63,18 @@ function(values, project = "toronto-shelter-project",
     )
     
     # return(job)
+}
+get_bigquery_connection <-
+function (project = "toronto-shelter-data",
+                               dataset = "data_raw") {
+    
+    # Connect to BigQuery
+    con <- DBI::dbConnect(
+        bigrquery::bigquery(),
+        project = project,
+        dataset = dataset,
+        billing = project  
+    )
+    
+    return(con)
 }
