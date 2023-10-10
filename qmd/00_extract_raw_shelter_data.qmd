@@ -117,7 +117,7 @@ Upload 2022 data. Again this is a one time upload.
 #     values  = daily_shelter_2022_tbl,
 #     project = "toronto-shelter-project",
 #     dataset = "data_raw",
-#     table   = "raw_shelter_2022",
+#     table   = "raw_shelter_2022"
 # 
 # )
 
@@ -136,7 +136,7 @@ get_bigquery_upload(
     values  = daily_shelter_2023_tbl,
     project = "toronto-shelter-project",
     dataset = "data_raw",
-    table   = "raw_shelter_2023",
+    table   = "raw_shelter_2023"
     
 )
 

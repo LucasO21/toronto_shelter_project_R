@@ -17,10 +17,10 @@ function(slice = 1) {
     return(ret)
 }
 get_bigquery_upload <-
-function(con, values, project = "toronto-shelter-project", 
-                               dataset = "data_raw", 
-                               table, create_disposition = "CREATE_IF_NEEDED",
-                               write_disposition = "WRITE_TRUNCATE") {
+function(project = "toronto-shelter-project", 
+                                dataset = "data_raw", table = NULL,
+                                create_disposition = "CREATE_IF_NEEDED",
+                                write_disposition = "WRITE_TRUNCATE") {
     
     # Validate parameters
     stopifnot(
@@ -31,21 +31,20 @@ function(con, values, project = "toronto-shelter-project",
         is.character(create_disposition), length(create_disposition) == 1
     )
     
-  
-    
     # Perform upload
     job <- bigrquery::insert_upload_job(
         values  = values,
         project = project,
         dataset = dataset,
         table   = table,
-        create_disposition = create_disposition
+        create_disposition = create_disposition,
+        write_disposition  = write_disposition
     )
     
     # Message
     job_time <- tibble(
         creation_time = as.numeric(job$statistics$creationTime),
-        start_time = as.numeric(job$statistics$startTime)
+        start_time    = as.numeric(job$statistics$startTime)
     ) %>% 
         mutate(creation_time = as.POSIXct(creation_time / 1000, origin = "1970-01-01", tz = "America/New_York") + 2*3600) %>% 
         mutate(start_time = as.POSIXct(start_time / 1000, origin = "1970-01-01", tz = "America/New_York") + 2*3600)
@@ -65,7 +64,7 @@ function(con, values, project = "toronto-shelter-project",
     # return(job)
 }
 get_bigquery_connection <-
-function (project = "toronto-shelter-data",
+function (project = "toronto-shelter-project",
                                dataset = "data_raw") {
     
     # Connect to BigQuery

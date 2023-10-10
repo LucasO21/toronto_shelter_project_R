@@ -44,7 +44,7 @@ test_tbl <- get_shelter_data() %>% distinct()
 
 
 # * Big Query Connection ----
-get_bigquery_connection <- function (project = "toronto-shelter-data",
+get_bigquery_connection <- function (project = "toronto-shelter-project",
                                dataset = "data_raw") {
     
     # Connect to BigQuery
