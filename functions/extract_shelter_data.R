@@ -18,7 +18,7 @@ function(slice = 1) {
 }
 get_bigquery_upload <-
 function(project = "toronto-shelter-project", 
-                                dataset = "data_raw", table = NULL,
+                                dataset = "data_raw", table = NULL, values = NULL,
                                 create_disposition = "CREATE_IF_NEEDED",
                                 write_disposition = "WRITE_TRUNCATE") {
     
@@ -46,8 +46,12 @@ function(project = "toronto-shelter-project",
         creation_time = as.numeric(job$statistics$creationTime),
         start_time    = as.numeric(job$statistics$startTime)
     ) %>% 
-        mutate(creation_time = as.POSIXct(creation_time / 1000, origin = "1970-01-01", tz = "America/New_York") + 2*3600) %>% 
-        mutate(start_time = as.POSIXct(start_time / 1000, origin = "1970-01-01", tz = "America/New_York") + 2*3600)
+        mutate(creation_time = as.POSIXct(
+            creation_time / 1000, origin = "1970-01-01", tz = "America/New_York"
+        ) + 2*3600) %>% 
+        mutate(start_time = as.POSIXct(
+            start_time / 1000, origin = "1970-01-01", tz = "America/New_York"
+        ) + 2*3600)
 
     msg <- message(
         stringr::str_glue(

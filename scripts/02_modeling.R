@@ -83,10 +83,12 @@ get_features_data_from_bigquery <- function(year = 2023) {
   
 }
 
-features_raw_list <- get_features_data_from_bigquery(year = 2023)
+features_raw_list_2023 <- get_features_data_from_bigquery(year = 2023)
+
+features_raw_list_2022 <- get_features_data_from_bigquery(year = 2022)
 
 
-# * Prep Weather Data ----
+# * Prep Weather Data (2023 Only)----
 get_weather_data_prepped <- function(x) {
   
   # diff dates
@@ -136,22 +138,43 @@ get_weather_data_prepped <- function(x) {
   
 }
 
-get_weather_data_prepped(x = features_raw_list)
+get_weather_data_prepped(x = features_raw_list_2023)
 
 
-# * Combine Data ----
-daily_combined_tbl <- features_raw_list[[1]] %>% 
+# * Combine Data Step 1: Shelter & Weather Data ----
+
+# ** 2023 ----
+daily_combined_tbl_2023 <- features_raw_list_2023[[1]] %>% 
   #select(occupancy_date) %>% 
   left_join(
-    get_weather_data_prepped(features_raw_list) %>% select(-stn),
+    get_weather_data_prepped(features_raw_list_2023) %>% select(-stn),
     by = c("occupancy_date" = "date")
   )
 
-daily_combined_tbl %>% sapply(function(x) sum(is.na(x)))
+daily_combined_tbl_2023 %>% glimpse()
 
-daily_combined_tbl %>% filter(is.na(days_open)) %>% View()
+daily_combined_tbl_2023 %>% sapply(function(x) sum(is.na(x)))
 
 
+# ** 2022 ----
+daily_combined_tbl_2022 <- features_raw_list_2022[[1]] %>% 
+  filter(modeling_cohort == 1) %>% 
+  left_join(
+    features_raw_list_2022[[2]] %>% 
+      select(-stn),
+    by = c("occupancy_date" = "date")
+  ) %>% 
+  filter(occupancy_date >= as.Date("2022-10-01"))
+
+daily_combined_tbl_2022 %>% glimpse()
+
+daily_combined_tbl_2022 %>% sapply(function(x) sum(is.na(x)))
+
+
+
+# * Combine Data Step 2: 2022 & 2023 ----
+daily_combined_tbl <- daily_combined_tbl_2022 %>% 
+  bind_rows(daily_combined_tbl_2023)
 
 
 # *****************************************************************************
@@ -160,46 +183,46 @@ daily_combined_tbl %>% filter(is.na(days_open)) %>% View()
 # *****************************************************************************
 
 # * Check For Nulls ----
-daily_shelter_tbl %>% 
-  sapply(function(x) sum(is.na(x)))
-
-# * Distinct Counts ----
-
-# * Distinct Organizations
-daily_shelter_tbl %>% distinct(organization_id) %>% nrow()
-
-# * Distinct Shelters
-daily_shelter_tbl %>% distinct(shelter_id) %>% nrow()
-
-# * Distinct Locations
-daily_shelter_tbl %>% distinct(location_id) %>% nrow()
-
-# * Distinct Programs
-daily_shelter_tbl %>% distinct(program_id) %>% nrow()
-
-# * Others
-daily_shelter_tbl %>% distinct(overnight_service_type)
-
-
-# * Actual Occupancy by Type ----
-daily_shelter_tbl %>% 
-  count(program_model, sort = TRUE) %>% 
-  mutate(pct = n/sum(n))
-
-
-# * Actual Occupancy Shelter ----
-daily_shelter_tbl %>% 
-  count(shelter_id, sort = TRUE) %>% 
-  mutate(pct = n/sum(n)) %>% 
-  mutate(pct_cum = cumsum(pct)) %>% 
-  head(10)
-
-daily_shelter_tbl %>% 
-  filter(shelter_id == 24) %>% View()
-
-daily_shelter_tbl %>% 
-  select(capacity_type, program_area) %>% 
-  distinct()
+# daily_shelter_tbl %>% 
+#   sapply(function(x) sum(is.na(x)))
+# 
+# # * Distinct Counts ----
+# 
+# # * Distinct Organizations
+# daily_shelter_tbl %>% distinct(organization_id) %>% nrow()
+# 
+# # * Distinct Shelters
+# daily_shelter_tbl %>% distinct(shelter_id) %>% nrow()
+# 
+# # * Distinct Locations
+# daily_shelter_tbl %>% distinct(location_id) %>% nrow()
+# 
+# # * Distinct Programs
+# daily_shelter_tbl %>% distinct(program_id) %>% nrow()
+# 
+# # * Others
+# daily_shelter_tbl %>% distinct(overnight_service_type)
+# 
+# 
+# # * Actual Occupancy by Type ----
+# daily_shelter_tbl %>% 
+#   count(program_model, sort = TRUE) %>% 
+#   mutate(pct = n/sum(n))
+# 
+# 
+# # * Actual Occupancy Shelter ----
+# daily_shelter_tbl %>% 
+#   count(shelter_id, sort = TRUE) %>% 
+#   mutate(pct = n/sum(n)) %>% 
+#   mutate(pct_cum = cumsum(pct)) %>% 
+#   head(10)
+# 
+# daily_shelter_tbl %>% 
+#   filter(shelter_id == 24) %>% View()
+# 
+# daily_shelter_tbl %>% 
+#   select(capacity_type, program_area) %>% 
+#   distinct()
 
 
 # *****************************************************************************
@@ -208,7 +231,7 @@ daily_shelter_tbl %>%
 # *****************************************************************************
 
 # * Top Orgs by Location ----
-daily_shelter_tbl %>% 
+daily_combined_tbl %>% 
   summarise(
     n   = n_distinct(location_id),
     .by = c(organization_name, organization_id)
