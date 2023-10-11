@@ -45,7 +45,12 @@ Get the data for modeling from biq query.
 ```{r load_data, message=TRUE}
 
 # Get Data from BQ
-features_raw_list <- get_features_data_from_bigquery(year = 2023)
+
+# 2022
+features_raw_list_2022 <- get_features_data_from_bigquery(year = 2022)
+
+# 2023
+features_raw_list_2023 <- get_features_data_from_bigquery(year = 2023)
 
 ```
 
@@ -53,41 +58,65 @@ features_raw_list <- get_features_data_from_bigquery(year = 2023)
 
 ## Prep Weather Data
 
-There is a difference of about 3 days between shelter data and weather data. We want
+For data in 2023, there is a difference of about 3 days between shelter data and weather data. We want
 to fill in temp values for these days. The `get_weather_data_prepped()` function
 does this step.
 
+## Prep Weather Data (2023 Only)
 
-```{r prep_weather_data}
+This step prepares the weather data by filling the gap stated earlier with a rolling average 
+of weather values for the last 3 days.
 
-# Prep Weather Data
-# get_weather_data_prepped(features_raw_list)
+
+```{r prep_weather_data_2023}
+
+# Prep Weather Data 2023 Only
+daily_weather_2023_prepped_tbl <- get_weather_data_prepped(features_raw_list_2023)
 ```
 
 
 ---
+## Combine Data Step 1: Shelter Data & Weather Data
 
-## Combine Data
+This step combines the shelter data with weather for 2022 and 2023.
 
-In this step, we combine the features from shelter data with daily weather data.
+```{r combine_data_1}
+
+# 2022
+daily_combined_tbl_2022 <- features_raw_list_2022[[1]] %>% 
+  filter(modeling_cohort == 1) %>% 
+  left_join(
+    daily_weather_2023_prepped_tbl %>% 
+      select(-stn),
+    by = c("occupancy_date" = "date")
+  ) %>% 
+  filter(occupancy_date >= as.Date("2022-10-01"))
 
 
-```{r combine_data}
-
-# Combine Data 
-daily_combined_tbl <- features_raw_list[[1]] %>% 
+# 2023
+daily_combined_tbl_2023 <- features_raw_list_2023[[1]] %>% 
   #select(occupancy_date) %>% 
   left_join(
-    get_weather_data_prepped(features_raw_list) %>% select(-stn),
+    get_weather_data_prepped(features_raw_list_2023) %>% select(-stn),
     by = c("occupancy_date" = "date")
   )
 
-daily_combined_tbl %>% glimpse()
 ```
 
 
 ---
+## Combine Data Step 2: 2022 & 2023
 
+This step combines 2022 and 2023 data.
+
+```{r combine_data_2}
+
+
+```
+
+
+
+---
 # Data Filtering
 
 To test out the workflow, we want to limit the number of locations we model. This test

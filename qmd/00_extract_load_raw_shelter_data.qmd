@@ -61,9 +61,10 @@ after the first extraction.
 ```{r extract_shelter_data_2022}
 
 # 2022 daily data
-# daily_shelter_2022_tbl <- get_shelter_data(slice = 3)
-# 
-# daily_shelter_2022_tbl %>% glimpse()
+daily_shelter_2022_tbl <- get_shelter_data(slice = 3) %>% 
+    mutate(occupancy_date = lubridate::ymd(occupancy_date))
+
+daily_shelter_2022_tbl %>% glimpse()
 
 ```
 
