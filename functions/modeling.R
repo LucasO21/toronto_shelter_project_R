@@ -21,9 +21,15 @@ function(year = 2023) {
       "
       Shelter Data Info:
         nrow: {nrow(shelter_tbl)}
-        nrow: {ncol(shelter_tbl)}
+        ncol: {ncol(shelter_tbl)}
         min date: {min(shelter_tbl$occupancy_date)}
         max date: {max(shelter_tbl$occupancy_date)}
+      ====================================================
+      Weather Data Info:
+        nrow: {nrow(weather_tbl)}
+        ncol: {ncol(weather_tbl)}
+        min date: {min(weather_tbl$date)}
+        max date: {max(weather_tbl$date)}
       "
     )
   )

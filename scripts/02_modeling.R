@@ -72,8 +72,8 @@ get_features_data_from_bigquery <- function(year = 2023) {
       Weather Data Info:
         nrow: {nrow(weather_tbl)}
         ncol: {ncol(weather_tbl)}
-        min date: {min(weather_tbl$occupancy_date)}
-        max date: {max(weather_tbl$occupancy_date)}
+        min date: {min(weather_tbl$date)}
+        max date: {max(weather_tbl$date)}
       "
     )
   )

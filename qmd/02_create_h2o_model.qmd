@@ -15,85 +15,218 @@ knitr::opts_chunk$set(warning = FALSE, message = FALSE)
 # Libraries
 library(tidyverse)
 library(bigrquery)
-library(tidyverse)
+library(slider)
 library(janitor)
-library(httr)
-library(jsonlite)
+library(tidymodels)
+library(h2o)
 
 # Source
 source(file = "../functions/extract_shelter_data.R")
 source(file = "../functions/extract_weather_forecast.R")
+source(file = "../functions/modeling.R")
 ```
 
 
 # Introduction
 
-This notebook uses the [AccuWeather](https://developer.accuweather.com/apis) API 
-to extract weather forecast data to use as a feature for predicting overnight
-shelter occupancy.
+In this notebook, we employ H2O AutoML to develop two distinct machine learning models 
+aimed at forecasting overnight shelter occupancy. The first model, a classification model, 
+predicts whether a specific location will be fully occupied (100%) based on certain features.
+The second, a regression model, estimates the actual number of occupied beds or rooms, 
+also based on certain features. Collectively, these models assist in 
+accurately predicting future shelter occupancy levels.
 
 ---
 
-# Get Data from AccuWeather API 
+# Get Data Biq Query
 
-Get weather forecast for the next 5 days. 
+Get the data for modeling from biq query.
 
-```{r request_url}
+```{r load_data, message=TRUE}
 
-# Get Request URL
-response <- get_request_url(city_loc = "5548")
+# Get Data from BQ
+features_raw_list <- get_features_data_from_bigquery(year = 2023)
 
-response
+```
+
+---
+
+## Prep Weather Data
+
+There is a difference of about 3 days between shelter data and weather data. We want
+to fill in temp values for these days. The `get_weather_data_prepped()` function
+does this step.
+
+
+```{r prep_weather_data}
+
+# Prep Weather Data
+# get_weather_data_prepped(features_raw_list)
+```
+
+
+---
+
+## Combine Data
+
+In this step, we combine the features from shelter data with daily weather data.
+
+
+```{r combine_data}
+
+# Combine Data 
+daily_combined_tbl <- features_raw_list[[1]] %>% 
+  #select(occupancy_date) %>% 
+  left_join(
+    get_weather_data_prepped(features_raw_list) %>% select(-stn),
+    by = c("occupancy_date" = "date")
+  )
+
+daily_combined_tbl %>% glimpse()
+```
+
+
+---
+
+# Data Filtering
+
+To test out the workflow, we want to limit the number of locations we model. This test
+will focus on modeling the shelters with the highest number of locations. 
+
+```{r top_locations}
+
+# Show Top Locations
+daily_shelter_tbl %>% 
+    summarise(
+       n   = n_distinct(location_id),
+       .by = c(organization_name, organization_id)
+    ) %>% 
+    arrange(desc(n)) %>% 
+    head(5)
+
+```
+
+Notice the top 3 organizations in terms of the number of distinct locations. Therefore
+we'll focus on City of Toronto (22 locations), Homes First Society (10 locations) and
+Dixon Hall (6 locations).
+
+---
+
+## Data Filtering for Top 3 Organizations/Locations
+
+```{r data_filtering}
+
+# Data Filtering
+sample_shelter_tbl <- daily_shelter_tbl %>% 
+  filter(organization_id %in% c(1, 15, 6)) %>% 
+  filter(modeling_cohort == 1) # this step is filtering for locations open > 75% of days in year
+
+sample_shelter_tbl %>% glimpse()
+
+```
+
+---
+
+# Get Modeling Features
+
+Extract the necessary features needed for modeling
+
+```{r modeling_features}
+
+# Get Modeling Features
+modeling_tbl <- get_modeling_features(sample_shelter_tbl)
+
+modeling_tbl %>% glimpse()
 
 ```
 
 
 ---
 
-## Parse Response Contents
+# Data Prep for Modeling
 
-Parse the contents from the `response`.
+## Data Splitting
 
-```{r parse_response}
+80/20 training/testing split
 
-# Parse Response
-parse <- get_request(response = response, output = "data")
+```{r}
+set.seed(123)
+splits_spec <- initial_split(modeling_tbl, prop = 0.80, strata = occupancy_rate)
 
-parse %>% glimpse()
+train_raw_tbl <- training(splits_spec)
+test_raw_tbl  <- testing(splits_spec)
 ```
 
+## Create Recipes
+
+The function `get_automl_recipes()` is used to build classification and regression
+recipes.
+
+```{r recipes}
+
+# Create Recipes
+recipe_spec_prob <- get_automl_recipes(train_raw_tbl)
+
+recipe_spec_reg <- get_automl_recipes(train_raw_tbl, prob = FALSE)
+
+recipe_spec_prob
+
+recipe_spec_reg
+
+```
 
 ---
 
-# Get Forecast Data
+# Model Training (H2o AutoML)
 
-Get forecast data from parsed response
+Modeling with H2o.
 
-```{r get_forecast_data}
+```{r h2o_init}
 
-# Get Forecast Data
-weather_forecast_tbl <- get_data(data = parse)
-
-weather_forecast_tbl
+# Initialize H2o
+h2o.init()
 
 ```
 
+## Classification Model
 
----
+```{r prob_model}
 
-# Upload Forecast Data to Big Query
-
-Upload the forecast data to big query
-
-```{r upload_to_bq}
-
-# Upload to Big Query
-get_bigquery_upload(
-    values  = weather_forecast_tbl,
-    project = "toronto-shelter-project",
-    dataset = "data_pred",
-    table   = "pred_weather",
-write_disposition = "WRITE_APPEND"
+# Automl Models Prob
+automl_output_list_prob <- get_automl_models(
+  recipe     = recipe_spec_prob,
+  train_data = train_raw_tbl,
+  test_data  = test_raw_tbl,
+  prob       = TRUE
 )
 
+automl_output_list_prob
 ```
+
+
+## Regression Model
+
+```{r reg_model}
+# Automl Models Reg
+automl_output_list_reg<- get_automl_models(
+  recipe     = recipe_spec_reg,
+  train_data = train_raw_tbl,
+  test_data  = test_raw_tbl,
+  prob       = FALSE
+)
+
+automl_output_list_reg
+```
+
+## Save AutoML Artifacts
+
+```{r save_artifacts}
+
+# Save Best Model (Prob)
+automl_output_list_prob %>% write_rds("../artifacts/h2o_models_v1/automl_list_prob.rds")
+
+# Save Best Model (Reg)
+automl_output_list_reg %>% write_rds("../artifacts/h2o_models_v1/automl_list_reg.rds")
+
+```
+
