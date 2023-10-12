@@ -91,8 +91,8 @@ Upload the forecast data to big query
 get_bigquery_upload(
     values  = weather_forecast_tbl,
     project = "toronto-shelter-project",
-    dataset = "data_pred",
-    table   = "pred_weather",
+    dataset = "data_features",
+    table   = "feature_weather_forecast",
 write_disposition = "WRITE_APPEND"
 )
 

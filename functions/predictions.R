@@ -1,36 +1,5 @@
-# PREDICTION SCRIPT ----
-# *** ----
-
-# *****************************************************************************
-# SETUP ----
-# *****************************************************************************
-
-# * Set Working Dir ----
-setwd(here::here("scripts"))
-
-# * Libraries ----
-library(tidyverse)
-library(janitor)
-library(bigrquery)
-library(tidymodels)
-library(h2o)
-
-# * Source ----
-source(file = "../functions/extract_shelter_data.R")
-
-# *****************************************************************************
-# **** ----
-# DATA IMPORT ----
-# *****************************************************************************
-
-# * BQ Connection ----
-con <- get_bigquery_connection(dataset = "data_features")
-
-# * List Tables ----
-dbListTables(con)
-
-# * Get Data ----
-get_predictions_features_from_bq <- function(table_name) {
+get_predictions_features_from_bq <-
+function(table_name) {
     
     # con
     con <- get_bigquery_connection(dataset = "data_features")
@@ -86,18 +55,8 @@ get_predictions_features_from_bq <- function(table_name) {
     )
     
 }
-
-pred_features_data_list <- get_pred_features_from_bq()
-
-# pred_features_data_list[2]
-
-# *****************************************************************************
-# **** ----
-# COMBINE DATA ----
-# *****************************************************************************
-
-# * Combine Shelter & Weather Features ----
-get_prediction_features_combined <- function(shelter_features, weather_features) {
+get_prediction_features_combined <-
+function(shelter_features, weather_features) {
     
     ret <- shelter_features %>% 
         left_join(
@@ -108,28 +67,8 @@ get_prediction_features_combined <- function(shelter_features, weather_features)
     
     return(ret)
 }
-
-pred_features_combined <- get_pred_features_combined(
-    pred_features_data_list[[1]], 
-    pred_features_data_list[[2]]
-)
-
-pred_features_combined %>% glimpse()
-
-pred_features_combined %>% sapply(function(x) sum(is.na(x)))
-
-min(pred_features_combined$occupancy_date)
-max(pred_features_combined$occupancy_date)
-
-
-
-# *****************************************************************************
-# **** ----
-# DATA PROCESSING (RECIPES) ----
-# *****************************************************************************
-
-# * Data Processing ----
-get_prediction_recipes <- function(data) {
+get_prediction_recipes <-
+function(data) {
     
     # * Prob ----
     prob_tbl <- get_automl_recipes(data) %>% 
@@ -152,15 +91,8 @@ get_prediction_recipes <- function(data) {
     )
     
 }
-
-pred_data_processed_list <- get_prediction_recipes(pred_features_combined)
-
-# *****************************************************************************
-# **** ----
-# MAKE PREDICTIONS ----
-# *****************************************************************************
-
-get_predictions <- function(list) {
+get_predictions <-
+function(list) {
     
     # LOAD MODELS
     
@@ -196,16 +128,8 @@ get_predictions <- function(list) {
     return(ret)
     
 }
-
-pred_tbl <- get_predictions(pred_data_processed_list)
-
-
-# *****************************************************************************
-# **** ----
-# FORMAT PREDICTIONS ----
-# *****************************************************************************
-
-get_predictions_formatted <- function(raw_data, pred_data) {
+get_predictions_formatted <-
+function(raw_data, pred_data) {
     
     # Current Time
     current_time <- Sys.time()
@@ -246,40 +170,3 @@ get_predictions_formatted <- function(raw_data, pred_data) {
     return(ret)
     
 }
-
-pred_final_tbl <- get_predictions_formatted(
-    raw_data  = pred_features_combined,
-    pred_data = pred_tbl
-)
-
-
-# *****************************************************************************
-# **** ----
-# UPLOAD PREDICTIONS TO BIG QUERY ----
-# *****************************************************************************
-
-# # * Prob ----
-# get_bigquery_upload(
-#     values  = pred_formated_tbl,
-#     project = "toronto-shelter-project",
-#     dataset = "data_pred",
-#     table   = "data_predictions",
-#     write_disposition = "WRITE_APPEND"
-# )
-
-# *****************************************************************************
-# **** ----
-# SAVE FUNCTIONS ----
-# *****************************************************************************
-
-dump(
-    list = c(
-        "get_predictions_features_from_bq",
-        "get_prediction_features_combined",
-        "get_prediction_recipes",
-        "get_predictions",
-        "get_predictions_formatted"
-    ),
-    file = "../functions/predictions.R",
-    append = FALSE
-)
