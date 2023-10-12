@@ -42,15 +42,14 @@ con <- get_bigquery_connection()
 get_shelter_data <- function(slice = 1) {
     
     # big query con
-    # con <- get_bigquery_connection()
-    
-    # max date in bq
-    # max_date <- dplyr::tbl(con, "raw_shelter_2023") %>% 
-    #     distinct(occupancy_date) %>% 
-    #     collect()
+    # con <- get_bigquery_connection(dataset = "data_raw")
     # 
-    # max_date <- max(max_date$occupancy_date)
-    
+    # # max date in bq
+    # max_date <- dplyr::tbl(con, "raw_shelter_2023") %>% 
+    #     pull(occupancy_date) %>%
+    #     max()
+    #     collect()
+
     # info
     info <- show_package("21c83b32-d5a8-4106-a54f-010dbe49f6f2") %>% 
         list_package_resources() %>% 
@@ -64,7 +63,13 @@ get_shelter_data <- function(slice = 1) {
         get_resource() %>% 
         janitor::clean_names() %>% 
         mutate(occupancy_date = lubridate::ymd(occupancy_date))
-        #filter(occupancy_date > max_date)
+    
+    # max date
+    max_date <- max(ret$occupancy_date)
+    
+    # filter
+    ret <- ret %>% 
+        filter(occupancy_date > max_date - 1)
     
     return(ret)
 }
@@ -128,22 +133,22 @@ get_bigquery_upload <- function(values, project = "toronto-shelter-project",
 # *****************************************************************************
 
 # * 2022 ----
-shelter_data_2022 <- get_shelter_data(slice = 3)
-
-shelter_data_2022 %>% 
-    get_bigquery_upload(
-        table = "raw_shelter_2022"
-    )
-
-
-# * 2023 ----
-shelter_data_2023 <- get_shelter_data(slice = 1) %>% 
-    filter(occupancy_date <= as.Date("2023-10-09"))
-
-shelter_data_2023 %>% 
-    get_bigquery_upload(
-        table = "raw_shelter_2023"
-    )
+# shelter_data_2022 <- get_shelter_data(slice = 3)
+# 
+# shelter_data_2022 %>% 
+#     get_bigquery_upload(
+#         table = "raw_shelter_2022"
+#     )
+# 
+# 
+# # * 2023 ----
+# shelter_data_2023 <- get_shelter_data(slice = 1) %>% 
+#     filter(occupancy_date <= as.Date("2023-10-09"))
+# 
+# shelter_data_2023 %>% 
+#     get_bigquery_upload(
+#         table = "raw_shelter_2023"
+#     )
 
 # *****************************************************************************
 # **** ----

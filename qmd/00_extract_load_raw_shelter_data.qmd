@@ -61,10 +61,10 @@ after the first extraction.
 ```{r extract_shelter_data_2022}
 
 # 2022 daily data
-daily_shelter_2022_tbl <- get_shelter_data(slice = 3) %>% 
-    mutate(occupancy_date = lubridate::ymd(occupancy_date))
-
-daily_shelter_2022_tbl %>% glimpse()
+# daily_shelter_2022_tbl <- get_shelter_data(slice = 3) %>% 
+#     mutate(occupancy_date = lubridate::ymd(occupancy_date))
+# 
+# daily_shelter_2022_tbl %>% glimpse()
 
 ```
 
@@ -137,7 +137,8 @@ get_bigquery_upload(
     values  = daily_shelter_2023_tbl,
     project = "toronto-shelter-project",
     dataset = "data_raw",
-    table   = "raw_shelter_2023"
+    table   = "raw_shelter_2023",
+    write_disposition = "WRITE_APPEND"
     
 )
 

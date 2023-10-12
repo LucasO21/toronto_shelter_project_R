@@ -24,31 +24,93 @@ source(file = "../functions/extract_shelter_data.R")
 # *****************************************************************************
 
 # * BQ Connection ----
-con <- get_bigquery_connection(dataset = "data_pred")
+con <- get_bigquery_connection(dataset = "data_features")
 
 # * List Tables ----
 dbListTables(con)
 
-# * Load Data ----
-shelter_pred_tbl <- dplyr::tbl(con, "pred_shelter") %>% 
-    collect() %>% 
-    mutate(forecast_date = lubridate::ymd(forecast_date)) %>% 
-    rename(occupancy_date = forecast_date) %>% 
-    rename(
-        capacity_actual = avg_capacity_actual_l7d,
-        occupied        = avg_occupied_l7d,
-        occupancy_rate  = avg_occupancy_rate_l7d
-    ) %>% 
-    mutate(x_id = row_number(), .before = occupancy_date) %>% 
-    mutate(occupancy_rate = ifelse(occupancy_rate == 100, "Yes", "No") %>% as.factor()) %>% 
-    mutate_if(is_character, as_factor) %>% 
-    mutate(organization_id = as.factor(organization_id)) %>% 
-    mutate(shelter_id = as_factor(shelter_id)) %>% 
-    mutate(location_id = as_factor(location_id)) %>% 
-    mutate(program_id = as_factor(program_id)) %>% 
-    filter(organization_id %in% c(1, 15, 6))
+# * Get Data ----
+get_pred_features_from_bq <- function(table_name) {
+    
+    # con
+    con <- get_bigquery_connection(dataset = "data_features")
+    
+    # get shelter features
+    shelter_pred_tbl <- dplyr::tbl(con, "feature_pred_shelter") %>% 
+        collect() %>% 
+        mutate(occupancy_date = lubridate::ymd(occupancy_date)) %>% 
+        rename(
+            capacity_actual = avg_capacity_actual_l7d,
+            occupied        = avg_occupied_l7d,
+            occupancy_rate  = avg_occupancy_rate_l7d
+        ) %>% 
+        mutate(x_id = row_number(), .before = occupancy_date) %>% 
+        mutate(occupancy_rate = ifelse(occupancy_rate == 100, "Yes", "No") %>% as.factor()) %>% 
+        mutate_if(is_character, as_factor) %>% 
+        filter(organization_id %in% c(1, 15, 6)) %>% 
+        mutate(across(c(organization_id, shelter_id, location_id, program_id), as.factor))
+    
+    # get weather features
+    weather_forecast_tbl <- dplyr::tbl(con, "feature_weather_forecast") %>% 
+        collect()
+    
+    weather_forecast_tbl <- weather_forecast_tbl %>% 
+        bind_rows(
+            tibble(
+                date     = max(weather_forecast_tbl$date + 1),
+                temp_min = mean(weather_forecast_tbl$temp_min),
+                temp_max = mean(weather_forecast_tbl$temp_max),
+                temp_avg = mean(weather_forecast_tbl$temp_avg)
+            )
+            
+        )
+    
+    # message
+    message(str_glue(
+        "shelter pred data info:
+            min date: {min(shelter_pred_tbl$occupancy_date)}
+            max date: {max(shelter_pred_tbl$occupancy_date)}
+        ==============================================================
+        weather forecast data info:
+            min date: {min(weather_forecast_tbl$date)}
+            max date: {max(weather_forecast_tbl$date)}
+        "
+    ))
+    
+    # return
+    return(
+        list(
+            shelter_pred_tbl     = shelter_pred_tbl,
+            weather_forecast_tbl = weather_forecast_tbl
+        )
+    )
+    
+}
 
-shelter_pred_tbl %>% glimpse()
+pred_features_data_list <- get_pred_features_from_bq()
+
+
+# *****************************************************************************
+# **** ----
+# COMBINE DATA ----
+# *****************************************************************************
+
+# * Combine Shelter & Weather Features ----
+get_pred_features_combined <- function(shelter_features, weather_features) {
+    
+    ret <- shelter_features %>% 
+        left_join(
+            weather_features,
+            by = c("occupancy_date" = "date")
+        )
+    
+    return(ret)
+}
+
+pred_features_combined <- get_pred_features_combined(
+    pred_features_data_list[[1]], 
+    pred_features_data_list[[2]]
+)
 
 
 

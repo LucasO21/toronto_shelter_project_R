@@ -1,6 +1,15 @@
 get_shelter_data <-
 function(slice = 1) {
     
+    # big query con
+    # con <- get_bigquery_connection(dataset = "data_raw")
+    # 
+    # # max date in bq
+    # max_date <- dplyr::tbl(con, "raw_shelter_2023") %>% 
+    #     pull(occupancy_date) %>%
+    #     max()
+    #     collect()
+
     # info
     info <- show_package("21c83b32-d5a8-4106-a54f-010dbe49f6f2") %>% 
         list_package_resources() %>% 
@@ -12,13 +21,21 @@ function(slice = 1) {
     ret <- info %>% 
         slice(slice) %>% 
         get_resource() %>% 
-        janitor::clean_names()
+        janitor::clean_names() %>% 
+        mutate(occupancy_date = lubridate::ymd(occupancy_date))
+    
+    # max date
+    max_date <- max(ret$occupancy_date)
+    
+    # filter
+    ret <- ret %>% 
+        filter(occupancy_date > max_date - 1)
     
     return(ret)
 }
 get_bigquery_upload <-
-function(project = "toronto-shelter-project", 
-                                dataset = "data_raw", table = NULL, values = NULL,
+function(values, project = "toronto-shelter-project", 
+                                dataset = "data_raw", table = NULL,
                                 create_disposition = "CREATE_IF_NEEDED",
                                 write_disposition = "WRITE_TRUNCATE") {
     
@@ -69,7 +86,7 @@ function(project = "toronto-shelter-project",
 }
 get_bigquery_connection <-
 function (project = "toronto-shelter-project",
-                               dataset = "data_raw") {
+                                     dataset = "data_raw") {
     
     # Connect to BigQuery
     con <- DBI::dbConnect(

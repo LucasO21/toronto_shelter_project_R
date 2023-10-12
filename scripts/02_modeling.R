@@ -49,15 +49,15 @@ get_features_data_from_bigquery <- function(year = 2023) {
   
   tables <- DBI::dbListTables(con)
   
-  shelter_tbl <- dplyr::tbl(con, str_glue("feature_shelter_{year}")) %>% 
+  shelter_tbl <- dplyr::tbl(con, str_glue("feature_shelter_plus_weather_{year}")) %>% 
     collect() %>% 
     mutate(occupancy_date = lubridate::ymd(occupancy_date)) %>% 
     mutate(location_address = str_trim(location_address, side = c("both"))) %>% 
     mutate(location_city = str_trim(location_city, side = c("both")))
   
-  weather_tbl <- dplyr::tbl(con, str_glue("feature_weather_{year}")) %>% 
-    collect() %>% 
-    mutate(date = lubridate::ymd(date))
+  # weather_tbl <- dplyr::tbl(con, str_glue("feature_weather_{year}")) %>% 
+  #   collect() %>% 
+  #   mutate(date = lubridate::ymd(date))
   
   # message
   message(
@@ -68,113 +68,30 @@ get_features_data_from_bigquery <- function(year = 2023) {
         ncol: {ncol(shelter_tbl)}
         min date: {min(shelter_tbl$occupancy_date)}
         max date: {max(shelter_tbl$occupancy_date)}
-      ====================================================
-      Weather Data Info:
-        nrow: {nrow(weather_tbl)}
-        ncol: {ncol(weather_tbl)}
-        min date: {min(weather_tbl$date)}
-        max date: {max(weather_tbl$date)}
       "
     )
   )
   
   # return 
-  return(list(shelter_tbl, weather_tbl))
+  return(shelter_tbl)
   
 }
 
-features_raw_list_2023 <- get_features_data_from_bigquery(year = 2023)
+features_2022_tbl <- get_features_data_from_bigquery(year = 2022)
 
-features_raw_list_2022 <- get_features_data_from_bigquery(year = 2022)
+features_2023_tbl <- get_features_data_from_bigquery(year = 2023)
 
+features_2022_tbl %>% sapply(function(x) sum(is.na(x)))
 
-# * Prep Weather Data (2023 Only)----
-get_weather_data_prepped <- function(x) {
-  
-  # diff dates
-  shelter_dates <- unique(x[[1]]$occupancy_date)
-  weather_dates <- unique(x[[2]]$date)
-  diff_dates    <- shelter_dates[!shelter_dates %in% weather_dates]
-  
-  # tibble of diff dates
-  weather_avg <- x[[2]] %>% 
-    arrange(date) %>% 
-    tail(6) %>% 
-    bind_rows(
-      tibble(
-        stn  = "712650",
-        date = c(diff_dates)
-      )
-    ) 
-  
-  # get count na values
-  na_length <- weather_avg %>% filter(is.na(temp_min)) %>% pull(temp_min) %>% length() + 1
-  
- # rolling avg for na values
- weather_avg <- weather_avg %>%  
-    mutate(
-      across(
-        starts_with("temp_"),
-        list(
-          filled = ~ifelse(
-            is.na(.),
-            slide_dbl(., ~mean(.x, na.rm = TRUE), .before = na_length  - 1, .complete = TRUE),
-            .
-          )
-        ),
-        .names = "{col}_{fn}"
-      )
-    ) %>% 
-    select(-c(temp_min, temp_max, temp_avg)) %>% 
-    setNames(names(.) %>% str_remove_all("_filled")) %>% 
-    filter(date %in% diff_dates)
- 
- # append rolling avg weather
- weather_tbl <- x[[2]] %>% bind_rows(weather_avg)
-    
-  
-  # return
-  return(weather_tbl)
-  
-}
-
-get_weather_data_prepped(x = features_raw_list_2023)
+features_2023_tbl %>% sapply(function(x) sum(is.na(x)))
 
 
-# * Combine Data Step 1: Shelter & Weather Data ----
-
-# ** 2023 ----
-daily_combined_tbl_2023 <- features_raw_list_2023[[1]] %>% 
-  #select(occupancy_date) %>% 
-  left_join(
-    get_weather_data_prepped(features_raw_list_2023) %>% select(-stn),
-    by = c("occupancy_date" = "date")
-  )
-
-daily_combined_tbl_2023 %>% glimpse()
-
-daily_combined_tbl_2023 %>% sapply(function(x) sum(is.na(x)))
-
-
-# ** 2022 ----
-daily_combined_tbl_2022 <- features_raw_list_2022[[1]] %>% 
-  filter(modeling_cohort == 1) %>% 
-  left_join(
-    features_raw_list_2022[[2]] %>% 
-      select(-stn),
-    by = c("occupancy_date" = "date")
-  ) %>% 
-  filter(occupancy_date >= as.Date("2022-10-01"))
-
-daily_combined_tbl_2022 %>% glimpse()
-
-daily_combined_tbl_2022 %>% sapply(function(x) sum(is.na(x)))
-
+# * Combine Data ----
 
 
 # * Combine Data Step 2: 2022 & 2023 ----
-daily_combined_tbl <- daily_combined_tbl_2022 %>% 
-  bind_rows(daily_combined_tbl_2023)
+daily_combined_tbl <- features_2022_tbl %>% 
+  bind_rows(features_2023_tbl)
 
 
 # *****************************************************************************
@@ -232,12 +149,12 @@ daily_combined_tbl <- daily_combined_tbl_2022 %>%
 
 # * Top Orgs by Location ----
 daily_combined_tbl %>% 
+  filter(occupancy_date >= as.Date("2022-10-01")) %>% 
   summarise(
     n   = n_distinct(location_id),
     .by = c(organization_name, organization_id)
   ) %>% 
   arrange(desc(n))
-
 
 # *****************************************************************************
 # **** ----
@@ -246,67 +163,67 @@ daily_combined_tbl %>%
 
 #' test modeling with 3 organizations (1, 15 and 6)
 
-# * Pick Top 3 Locations ----
-daily_shelter_tbl %>% 
-  filter(organization_id %in% c(1)) %>% 
-  #filter(modeling_cohort == 1) %>% 
-  distinct(organization_name, shelter_group, location_name, location_address, location_city) %>% 
-  View()
-
-# * Filter for Org 1 ----
-sample_shelter_tbl <- daily_shelter_tbl %>% 
+# * Filter for Top Orgs ----
+cohort_tbl <- daily_combined_tbl %>% 
   filter(organization_id %in% c(1, 15, 6)) %>% 
-  filter(modeling_cohort == 1)
+  filter(modeling_cohort == 1) %>% 
+  filter(occupancy_date >= as.Date("2022-10-01"))
 
-sample_shelter_tbl %>% distinct(location_address) %>% nrow()
+cohort_tbl %>% sapply(function(x) sum(is.na(x)))
 
-sample_shelter_tbl %>% distinct(location_id) %>% nrow()
+cohort_tbl %>% distinct(location_address) %>% nrow()
 
-sample_shelter_tbl %>% glimpse()
+cohort_tbl %>% distinct(location_id) %>% nrow()
+
+cohort_tbl %>% glimpse()
 
 # *****************************************************************************
 # **** ----
 # GET MODELING FEATURES ----
 # *****************************************************************************
 
+#' Extract features needed for modeling
+
 # * Modeling Data ----
-get_modeling_features <- function(data) {
-  
-  ret <- data %>% 
+modeling_tbl <- cohort_tbl %>% 
     select(
       x_id, occupancy_date, organization_id, shelter_id, location_id, program_id,
       sector, program_model, overnight_service_type, program_area, capacity_type, 
-      occupied, capacity_actual, occupancy_rate
+      occupied, capacity_actual, occupancy_rate, starts_with("temp")
     ) %>% 
     mutate(occupancy_rate = ifelse(occupancy_rate == 100, "Yes", "No") %>% as.factor()) %>% 
     mutate_if(is_character, as_factor) %>% 
     mutate(organization_id = as.factor(organization_id)) %>% 
     mutate(shelter_id = as_factor(shelter_id)) %>% 
     mutate(location_id = as_factor(location_id)) %>% 
-    mutate(program_id = as_factor(program_id)) 
-  
-  return(ret)
-  
-}
+    mutate(program_id = as_factor(program_id))
 
-
-modeling_tbl <- get_modeling_features(sample_shelter_tbl) %>% glimpse()
+modeling_tbl %>% glimpse()
 
 # *****************************************************************************
 # **** ----
-# MODELING PREP ----
+# MODELING DATA PREP  ----
 # *****************************************************************************
 
 
 # * Data Splitting ----
-set.seed(123)
-splits_spec <- initial_split(modeling_tbl, prop = 0.80, strata = occupancy_rate)
+# set.seed(123)
+# splits_spec <- initial_split(modeling_tbl, prop = 0.80, strata = occupancy_rate)
 
-train_raw_tbl <- training(splits_spec)
-test_raw_tbl  <- testing(splits_spec)
+# train_raw_tbl <- training(splits_spec)
+# test_raw_tbl  <- testing(splits_spec)
+
+train_raw_tbl <- modeling_tbl %>% 
+  filter(occupancy_date < as.Date("2023-06-01"))
+
+test_raw_tbl <- modeling_tbl %>% 
+  filter(! occupancy_date %in% train_raw_tbl$occupancy_date)
 
 
-# * Recipes ----
+# *****************************************************************************
+# **** ----
+# RECIPES ----
+# *****************************************************************************
 
 # * Recipe Classification ----
 get_automl_recipes <- function(data, prob = TRUE) {
@@ -344,7 +261,7 @@ get_automl_recipes <- function(data, prob = TRUE) {
   
 }
 
-get_automl_recipes(train_raw_tbl, TRUE) %>% juice() %>% glimpse()
+get_automl_recipes(train_raw_tbl, FALSE) %>% prep() %>% juice() %>% glimpse()
 
 recipe_spec_prob <- get_automl_recipes(train_raw_tbl)
 
@@ -414,12 +331,17 @@ automl_output_list_prob <- get_automl_models(
 )
 
 # * Automl Models Reg ----
-automl_output_list_reg<- get_automl_models(
+automl_output_list_reg <- get_automl_models(
   recipe     = recipe_spec_reg,
   train_data = train_raw_tbl,
   test_data  = test_raw_tbl,
   prob       = FALSE
 )
+
+# * View Outputs
+automl_output_list_prob[1]
+
+automl_output_list_reg[1]
 
 # Save Output
 automl_output_list_prob %>% write_rds("../artifacts/h2o_models_v1/automl_list_prob.rds")
@@ -436,31 +358,7 @@ leaderboard_h2o_prob <- automl_output_list_prob$h2o_automl_models
 leaderboard_h2o_reg <- automl_output_list_reg$h2o_automl_models
 
 
-# * Save Models ----
-h2o.getModel("StackedEnsemble_AllModels_1_AutoML_1_20231009_103413") %>% 
-  h2o.saveModel("../artifacts/h2o_models_v1/")
-
-
-# * Load Models ----
-stacked_ensemble_h2o <- h2o.loadModel(
-  "../artifacts/h2o_models_v1/StackedEnsemble_AllModels_1_AutoML_1_20231009_103413"
-)
-
-
 # * Making Predictions ----
-
-# ** Classification
-
-# ** Regression ----
-pred_reg_tbl <- automl_output_list_reg$h2o_automl_models@leader %>% 
-  h2o.predict(newdata = automl_output_list_reg$h2o_test) %>% 
-  as_tibble() %>% 
-  bind_cols(
-    automl_output_list_reg$test_raw %>% 
-      select(x_id, occupied)
-  )
-
-pred_reg_tbl %>% View()
 
 
 # * Performance ----
@@ -478,8 +376,12 @@ pred_reg_tbl %>% View()
 
 # * Save Functions ----
 dump(
-  list = c("get_features_data_from_bigquery", "get_weather_data_prepped",
-           "get_modeling_features", "get_automl_recipes", "get_automl_models"),
+  list = c(
+    "get_features_data_from_bigquery", 
+    "get_modeling_features", 
+    "get_automl_recipes", 
+    "get_automl_models"
+    ),
   file = "../functions/modeling.R",
   append = FALSE
 )
