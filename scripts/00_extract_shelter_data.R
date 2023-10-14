@@ -81,22 +81,28 @@ get_shelter_data <- function(year = 2023) {
     # filter
     ret <- df %>% filter(occupancy_date > max_date - 1)
     
-    message(str_glue(
-        "Data Info:
-            New Data Date: {unique(ret$occupancy_date)}"
-    ))
+    # Metadata
+    mtd <- str_glue(
+        "Metadata (Open Data Toronto API):
+            Rows: {nrow(ret)}
+            Cols: {ncol(ret)}
+            Date: {unique(ret$occupancy_date)}"
+    )
     
-    return(ret)
+    # Message
+    message(mtd)
+    
+    return(list(data = ret, metadata = mtd))
 }
 
-shelter_raw_tbl <- get_shelter_data()
+shelter_raw_tbl <- get_shelter_data()[[1]]
 
 
 # * Load to Big Query ----
 get_bigquery_upload <- function(values, project = "toronto-shelter-project", 
                                 dataset = "data_raw", table = NULL,
                                 create_disposition = "CREATE_IF_NEEDED",
-                                write_disposition = "WRITE_TRUNCATE") {
+                                write_disposition = "WRITE_APPEND") {
     
     # Validate parameters
     stopifnot(
@@ -122,15 +128,14 @@ get_bigquery_upload <- function(values, project = "toronto-shelter-project",
         creation_time = as.numeric(job$statistics$creationTime),
         start_time    = as.numeric(job$statistics$startTime)
     ) %>% 
-        mutate(creation_time = as.POSIXct(
-            creation_time / 1000, origin = "1970-01-01", tz = "America/New_York"
-        ) + 2*3600) %>% 
-        mutate(start_time = as.POSIXct(
-            start_time / 1000, origin = "1970-01-01", tz = "America/New_York"
-        ) + 2*3600) 
+        mutate(creation_time = format(
+            as.POSIXct(creation_time / 1000, origin = "1970-01-01"), "%Y-%m-%d %I:%M %p"
+        )) %>% 
+        mutate(start_time = format(
+            as.POSIXct(start_time / 1000, origin = "1970-01-01"), "%Y-%m-%d %I:%M %p"
+        ))
 
-    msg <- message(
-        stringr::str_glue(
+    mtd <- stringr::str_glue(
             "
             Job Status: {job$status}
             Job ID: {job$jobReference$jobId}
@@ -139,17 +144,28 @@ get_bigquery_upload <- function(values, project = "toronto-shelter-project",
             ======================================================
             "
         )
-    )
     
-    # return(job)
+    message(mtd)
+    
+    return(mtd)
 }
 
 
-get_bigquery_upload(
+upload_job <- get_bigquery_upload(
     values = shelter_raw_tbl,
     table  = "raw_shelter_2023",
     write_disposition = "WRITE_APPEND"
 )
+
+# *****************************************************************************
+# **** ----
+# COLLECT METADATA ----
+# *****************************************************************************
+
+
+
+
+
 
 # *****************************************************************************
 # **** ----
