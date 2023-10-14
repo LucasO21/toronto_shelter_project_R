@@ -39,22 +39,34 @@ get_bigquery_connection <- function (project = "toronto-shelter-project",
 con <- get_bigquery_connection()
 
 # * Extract Shelter Data ----
-get_shelter_data <- function(slice = 1) {
+get_shelter_data <- function(year = 2023) {
 
     # info
     info <- show_package("21c83b32-d5a8-4106-a54f-010dbe49f6f2") %>% 
         list_package_resources() %>% 
         filter(str_to_lower(format) %in% c("csv", "geojson")) %>% 
         filter(! is.na(last_modified)) %>% 
-        arrange(desc(last_modified))
+        arrange(desc(last_modified)) %>% 
+        mutate(last_modified_year = lubridate::year(last_modified))
     
+    if (year == 2023) {
+        info <- info %>% 
+            filter(! str_detect(name, "2022")) %>% 
+            filter(! str_detect(name, "2021")) %>% 
+            head(1)
+    } else if (year == 2022) {
+        info <- info %>% 
+            filter(str_detect(name, "2022")) %>% 
+            head(1)
+    }
+        
+    # info check
     if (is.null(info) || length(info) == 0) {
         stop("No API info extracted! Check API info code chunk", call. = FALSE)
     }
     
     # data
     df <- info %>% 
-        slice(slice) %>% 
         get_resource() %>% 
         janitor::clean_names() %>% 
         mutate(occupancy_date = lubridate::ymd(occupancy_date))
@@ -77,7 +89,7 @@ get_shelter_data <- function(slice = 1) {
     return(ret)
 }
 
-get_shelter_data()
+shelter_raw_tbl <- get_shelter_data()
 
 
 # * Load to Big Query ----
@@ -115,7 +127,7 @@ get_bigquery_upload <- function(values, project = "toronto-shelter-project",
         ) + 2*3600) %>% 
         mutate(start_time = as.POSIXct(
             start_time / 1000, origin = "1970-01-01", tz = "America/New_York"
-        ) + 2*3600)
+        ) + 2*3600) 
 
     msg <- message(
         stringr::str_glue(
@@ -131,6 +143,13 @@ get_bigquery_upload <- function(values, project = "toronto-shelter-project",
     
     # return(job)
 }
+
+
+get_bigquery_upload(
+    values = shelter_raw_tbl,
+    table  = "raw_shelter_2023",
+    write_disposition = "WRITE_APPEND"
+)
 
 # *****************************************************************************
 # **** ----
