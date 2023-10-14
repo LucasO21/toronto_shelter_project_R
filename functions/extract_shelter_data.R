@@ -1,6 +1,15 @@
 get_shelter_data <-
 function(slice = 1) {
     
+    # big query con
+    # con <- get_bigquery_connection(dataset = "data_raw")
+    # 
+    # # max date in bq
+    # max_date <- dplyr::tbl(con, "raw_shelter_2023") %>% 
+    #     pull(occupancy_date) %>%
+    #     max()
+    #     collect()
+
     # info
     info <- show_package("21c83b32-d5a8-4106-a54f-010dbe49f6f2") %>% 
         list_package_resources() %>% 
@@ -12,15 +21,23 @@ function(slice = 1) {
     ret <- info %>% 
         slice(slice) %>% 
         get_resource() %>% 
-        janitor::clean_names()
+        janitor::clean_names() %>% 
+        mutate(occupancy_date = lubridate::ymd(occupancy_date))
+    
+    # max date
+    max_date <- max(ret$occupancy_date)
+    
+    # filter
+    ret <- ret %>% 
+        filter(occupancy_date > max_date - 1)
     
     return(ret)
 }
 get_bigquery_upload <-
 function(values, project = "toronto-shelter-project", 
-                               dataset = "data_raw", 
-                               table, create_disposition = "CREATE_IF_NEEDED",
-                               write_disposition = "WRITE_TRUNCATE") {
+                                dataset = "data_raw", table = NULL,
+                                create_disposition = "CREATE_IF_NEEDED",
+                                write_disposition = "WRITE_TRUNCATE") {
     
     # Validate parameters
     stopifnot(
@@ -31,32 +48,29 @@ function(values, project = "toronto-shelter-project",
         is.character(create_disposition), length(create_disposition) == 1
     )
     
-    # Connect to BigQuery
-    con <- DBI::dbConnect(
-        bigrquery::bigquery(),
-        project = project,
-        dataset = dataset,
-        billing = project  # Assuming billing to the same project, adjust if different
-    )
-    
     # Perform upload
     job <- bigrquery::insert_upload_job(
         values  = values,
         project = project,
         dataset = dataset,
         table   = table,
-        create_disposition = create_disposition
+        create_disposition = create_disposition,
+        write_disposition  = write_disposition
     )
     
     # Message
     job_time <- tibble(
         creation_time = as.numeric(job$statistics$creationTime),
-        start_time = as.numeric(job$statistics$startTime)
+        start_time    = as.numeric(job$statistics$startTime)
     ) %>% 
-        mutate(creation_time = as.POSIXct(creation_time / 1000, origin = "1970-01-01", tz = "America/New_York") + 2*3600) %>% 
-        mutate(start_time = as.POSIXct(start_time / 1000, origin = "1970-01-01", tz = "America/New_York") + 2*3600)
+        mutate(creation_time = as.POSIXct(
+            creation_time / 1000, origin = "1970-01-01", tz = "America/New_York"
+        ) + 2*3600) %>% 
+        mutate(start_time = as.POSIXct(
+            start_time / 1000, origin = "1970-01-01", tz = "America/New_York"
+        ) + 2*3600)
 
-    message(
+    msg <- message(
         stringr::str_glue(
             "
             Job Status: {job$status}
@@ -69,4 +83,18 @@ function(values, project = "toronto-shelter-project",
     )
     
     # return(job)
+}
+get_bigquery_connection <-
+function (project = "toronto-shelter-project",
+                                     dataset = "data_raw") {
+    
+    # Connect to BigQuery
+    con <- DBI::dbConnect(
+        bigrquery::bigquery(),
+        project = project,
+        dataset = dataset,
+        billing = project  
+    )
+    
+    return(con)
 }

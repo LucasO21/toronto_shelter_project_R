@@ -1,0 +1,99 @@
+---
+title: "Data Extraction 2 - Weather Forecast (For Prediction)"
+date: "`r lubridate::now(tzone = 'EST')` EST"
+format: html
+theme: flatly
+toc: true
+toc-depth: 3
+number-sections: true
+number-depth: 2
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(warning = FALSE, message = FALSE) 
+
+# Libraries
+library(tidyverse)
+library(bigrquery)
+library(tidyverse)
+library(janitor)
+library(httr)
+library(jsonlite)
+
+# Source
+source(file = "../functions/extract_shelter_data.R")
+source(file = "../functions/extract_weather_forecast.R")
+```
+
+
+# Introduction
+
+This notebook uses the [AccuWeather](https://developer.accuweather.com/apis) API 
+to extract weather forecast data to use as a feature for predicting overnight
+shelter occupancy.
+
+---
+
+# Get Data from AccuWeather API 
+
+Get weather forecast for the next 5 days. 
+
+```{r request_url}
+
+# Get Request URL
+response <- get_request_url(city_loc = "5548")
+
+response
+
+```
+
+
+---
+
+## Parse Response Contents
+
+Parse the contents from the `response`.
+
+```{r parse_response}
+
+# Parse Response
+parse <- get_request(response = response, output = "data")
+
+parse %>% glimpse()
+```
+
+
+---
+
+# Get Forecast Data
+
+Get forecast data from parsed response
+
+```{r get_forecast_data}
+
+# Get Forecast Data
+weather_forecast_tbl <- get_data(data = parse)
+
+weather_forecast_tbl
+
+```
+
+
+---
+
+# Upload Forecast Data to Big Query
+
+Upload the forecast data to big query
+
+```{r upload_to_bq}
+
+# Upload to Big Query
+get_bigquery_upload(
+    values  = weather_forecast_tbl,
+    project = "toronto-shelter-project",
+    dataset = "data_features",
+    table   = "feature_weather_forecast",
+write_disposition = "WRITE_APPEND"
+)
+
+```

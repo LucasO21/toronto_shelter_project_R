@@ -1,0 +1,71 @@
+---
+title: "Report Predictions (BETA)"
+date: "`r lubridate::now(tzone = 'EST')` EST"
+format: html
+theme: flatly
+toc: true
+toc-depth: 3
+number-sections: true
+number-depth: 2
+code-fold: true
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(warning = FALSE, message = FALSE) 
+
+# Libraries
+library(tidyverse)
+library(bigrquery)
+library(slider)
+library(janitor)
+library(DT)
+library(data.table)
+
+# Source
+source(file = "../functions/extract_shelter_data.R")
+source(file = "../functions/extract_weather_forecast.R")
+source(file = "../functions/modeling.R")
+source(file = "../functions/predictions.R")
+source(file = "../functions/reporting.R")
+```
+
+
+# Introduction
+
+This notebook is used to report on predictions.
+
+::: {.callout-note}
+Predictions are currently being reported in this format to test the workflow. 
+The end goal for reporting would be an interactive `shiny` application.
+:::
+
+
+# Predictions
+
+The `datatable` below is used to show predictions (see `pred` columns) for the 
+next 5 days.
+
+
+## Import Predictions (Next 5 Days)
+```{r import_data}
+
+# Import Predictions from BQ
+reporting_tbl <- get_reporting_data_from_bq()
+
+```
+
+
+---
+
+## Show Predictions 
+
+```{r dt_table}
+
+# Import Predictions from BQ
+reporting_dt_tbl <- get_reporting_data(reporting_tbl)
+
+reporting_dt_tbl
+
+```
+
+
