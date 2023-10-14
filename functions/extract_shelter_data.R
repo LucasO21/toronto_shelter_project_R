@@ -1,14 +1,5 @@
 get_shelter_data <-
 function(slice = 1) {
-    
-    # big query con
-    # con <- get_bigquery_connection(dataset = "data_raw")
-    # 
-    # # max date in bq
-    # max_date <- dplyr::tbl(con, "raw_shelter_2023") %>% 
-    #     pull(occupancy_date) %>%
-    #     max()
-    #     collect()
 
     # info
     info <- show_package("21c83b32-d5a8-4106-a54f-010dbe49f6f2") %>% 
@@ -17,19 +8,31 @@ function(slice = 1) {
         filter(! is.na(last_modified)) %>% 
         arrange(desc(last_modified))
     
+    if (is.null(info) || length(info) == 0) {
+        stop("No API info extracted! Check API info code chunk", call. = FALSE)
+    }
+    
     # data
-    ret <- info %>% 
+    df <- info %>% 
         slice(slice) %>% 
         get_resource() %>% 
         janitor::clean_names() %>% 
         mutate(occupancy_date = lubridate::ymd(occupancy_date))
     
+    if (is.null(df) || length(df) == 0) {
+        stop("No data extracted! Check data chunk", call. = FALSE)
+    }
+    
     # max date
-    max_date <- max(ret$occupancy_date)
+    max_date <- max(df$occupancy_date)
     
     # filter
-    ret <- ret %>% 
-        filter(occupancy_date > max_date - 1)
+    ret <- df %>% filter(occupancy_date > max_date - 1)
+    
+    message(str_glue(
+        "Data Info:
+            New Data Date: {unique(ret$occupancy_date)}"
+    ))
     
     return(ret)
 }
