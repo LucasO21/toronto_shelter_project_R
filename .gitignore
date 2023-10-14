@@ -6,5 +6,6 @@
 /data
 /archive
 /qmd/00_extract_raw_shelter_data_files
+*_files/
 *.html
 .DS_Store
