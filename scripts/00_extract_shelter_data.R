@@ -142,13 +142,13 @@ get_bigquery_upload <- function(values, project = "toronto-shelter-project",
 # 
 # 
 # # * 2023 ----
-# shelter_data_2023 <- get_shelter_data(slice = 1) %>% 
-#     filter(occupancy_date <= as.Date("2023-10-09"))
-# 
-# shelter_data_2023 %>% 
-#     get_bigquery_upload(
-#         table = "raw_shelter_2023"
-#     )
+shelter_data_2023 <- get_shelter_data(slice = 1) %>%
+    filter(occupancy_date <= as.Date("2023-10-09"))
+
+shelter_data_2023 %>%
+    get_bigquery_upload(
+        table = "raw_shelter_2023"
+    )
 
 # *****************************************************************************
 # **** ----
