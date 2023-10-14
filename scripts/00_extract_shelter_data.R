@@ -39,22 +39,34 @@ get_bigquery_connection <- function (project = "toronto-shelter-project",
 con <- get_bigquery_connection()
 
 # * Extract Shelter Data ----
-get_shelter_data <- function(slice = 1) {
+get_shelter_data <- function(year = 2023) {
 
     # info
     info <- show_package("21c83b32-d5a8-4106-a54f-010dbe49f6f2") %>% 
         list_package_resources() %>% 
         filter(str_to_lower(format) %in% c("csv", "geojson")) %>% 
         filter(! is.na(last_modified)) %>% 
-        arrange(desc(last_modified))
+        arrange(desc(last_modified)) %>% 
+        mutate(last_modified_year = lubridate::year(last_modified))
     
+    if (year == 2023) {
+        info <- info %>% 
+            filter(! str_detect(name, "2022")) %>% 
+            filter(! str_detect(name, "2021")) %>% 
+            head(1)
+    } else if (year == 2022) {
+        info <- info %>% 
+            filter(str_detect(name, "2022")) %>% 
+            head(1)
+    }
+        
+    # info check
     if (is.null(info) || length(info) == 0) {
         stop("No API info extracted! Check API info code chunk", call. = FALSE)
     }
     
     # data
     df <- info %>% 
-        slice(slice) %>% 
         get_resource() %>% 
         janitor::clean_names() %>% 
         mutate(occupancy_date = lubridate::ymd(occupancy_date))
@@ -69,22 +81,28 @@ get_shelter_data <- function(slice = 1) {
     # filter
     ret <- df %>% filter(occupancy_date > max_date - 1)
     
-    message(str_glue(
-        "Data Info:
-            New Data Date: {unique(ret$occupancy_date)}"
-    ))
+    # Metadata
+    mtd <- str_glue(
+        "Metadata (Open Data Toronto API):
+            Rows: {nrow(ret)}
+            Cols: {ncol(ret)}
+            Date: {unique(ret$occupancy_date)}"
+    )
     
-    return(ret)
+    # Message
+    message(mtd)
+    
+    return(list(data = ret, metadata = mtd))
 }
 
-get_shelter_data()
+shelter_raw_tbl <- get_shelter_data()[[1]]
 
 
 # * Load to Big Query ----
 get_bigquery_upload <- function(values, project = "toronto-shelter-project", 
                                 dataset = "data_raw", table = NULL,
                                 create_disposition = "CREATE_IF_NEEDED",
-                                write_disposition = "WRITE_TRUNCATE") {
+                                write_disposition = "WRITE_APPEND") {
     
     # Validate parameters
     stopifnot(
@@ -110,15 +128,14 @@ get_bigquery_upload <- function(values, project = "toronto-shelter-project",
         creation_time = as.numeric(job$statistics$creationTime),
         start_time    = as.numeric(job$statistics$startTime)
     ) %>% 
-        mutate(creation_time = as.POSIXct(
-            creation_time / 1000, origin = "1970-01-01", tz = "America/New_York"
-        ) + 2*3600) %>% 
-        mutate(start_time = as.POSIXct(
-            start_time / 1000, origin = "1970-01-01", tz = "America/New_York"
-        ) + 2*3600)
+        mutate(creation_time = format(
+            as.POSIXct(creation_time / 1000, origin = "1970-01-01"), "%Y-%m-%d %I:%M %p"
+        )) %>% 
+        mutate(start_time = format(
+            as.POSIXct(start_time / 1000, origin = "1970-01-01"), "%Y-%m-%d %I:%M %p"
+        ))
 
-    msg <- message(
-        stringr::str_glue(
+    mtd <- stringr::str_glue(
             "
             Job Status: {job$status}
             Job ID: {job$jobReference$jobId}
@@ -127,10 +144,28 @@ get_bigquery_upload <- function(values, project = "toronto-shelter-project",
             ======================================================
             "
         )
-    )
     
-    # return(job)
+    message(mtd)
+    
+    return(mtd)
 }
+
+
+upload_job <- get_bigquery_upload(
+    values = shelter_raw_tbl,
+    table  = "raw_shelter_2023",
+    write_disposition = "WRITE_APPEND"
+)
+
+# *****************************************************************************
+# **** ----
+# COLLECT METADATA ----
+# *****************************************************************************
+
+
+
+
+
 
 # *****************************************************************************
 # **** ----
