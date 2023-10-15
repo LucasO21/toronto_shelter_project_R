@@ -78,10 +78,17 @@ ui <- tagList(
                                             class = "col-md-2",
                                             pickerInput(
                                                 inputId  = "location_info",
-                                                label    = "Location",
+                                                label    = "Location Info",
                                                 choices  = NULL,
                                                 multiple = TRUE,
-                                                selected = NULL
+                                                selected = NULL,
+                                                options = list(
+                                                    `actions-box` = TRUE,
+                                                    `deselect-all-text` = "Deselect All",
+                                                    `select-all-text` = "Select All",
+                                                    `none-selected-text` = "Nothing Selected",
+                                                    `selected-text-format` = "count > 1"
+                                                )
                                             )
                                             #uiOutput("location_id_picker_input")
                                         
@@ -89,34 +96,44 @@ ui <- tagList(
                                         div(
                                             class = "col-md-2",
                                             pickerInput(
-                                                inputId  = "organization_name",
-                                                label    = "Organization Name",
+                                                inputId  = "organization_info",
+                                                label    = "Organization Info",
                                                 choices  = NULL,
                                                 multiple = TRUE,
-                                                selected = NULL
+                                                selected = NULL,
+                                                options = list(
+                                                    `actions-box` = TRUE,
+                                                    `deselect-all-text` = "Deselect All",
+                                                    `select-all-text` = "Select All",
+                                                    `none-selected-text` = "Nothing Selected",
+                                                    `selected-text-format` = "count > 1"
+                                                )
                                             )
                                             #uiOutput("organization_id_picker_input")
                                         ),
                                         div(
-                                            class = "col-md-2",
+                                            class = "col-md-3",
                                             pickerInput(
-                                                inputId  = "program_name",
-                                                label    = "Program Name",
+                                                inputId  = "program_info",
+                                                label    = "Program Info",
                                                 choices  = NULL,
                                                 multiple = TRUE,
-                                                selected = NULL
+                                                selected = NULL,
+                                                options = list(
+                                                    `actions-box` = TRUE,
+                                                    `deselect-all-text` = "Deselect All",
+                                                    `select-all-text` = "Select All",
+                                                    `none-selected-text` = "Nothing Selected",
+                                                    `selected-text-format` = "count > 1"
+                                                )
                                             )
-                                        ),
-                                        div(
-                                            class = "col-md-6",
-                                            p(strong("ETL Metadata")),
-                                            textOutput("api_mtd"),
-                                            textOutput("bq_mtd")
                                         )
                                     ),
                                     div(
-                                        actionButton("apply", "Apply", icon = icon("play")),
-                                        actionButton("reset", "Reset", icon = icon("sync")),
+                                        actionButton("apply", "Apply", icon = icon("play"), width = "140px"),
+                                        actionButton("reset", "Reset", icon = icon("sync"), width = "140px"),
+                                        actionButton("download", "Download Data", icon = icon("download"), width = "140px"),
+                                        actionButton("mtd", "Metadata", icon = icon("data"), width = "140px"),
                                         
                                     )
                                 ) %>% shinyjs::hidden()
@@ -187,18 +204,22 @@ server <- function(input, output) {
     reporting_tbl <- reactive({
        tbl <- get_reporting_data_from_bq() %>% 
            select(-c(x_id, pkey)) %>% 
-           mutate(location_info = paste(location_id, ": ", location_name), .before = shelter_id)
+           mutate(loc_info = paste(location_id, ": ", location_name), .before = shelter_id) %>% 
+           mutate(org_info = paste(organization_id, ": ", organization_name), .before = shelter_id) %>% 
+           mutate(prog_info = paste(program_id, ": ", program_name), .before = shelter_id)
        
        tbl
+       
     })
+    
     
     # * Location Info Picker Update ----
     shiny::observe({
         updatePickerInput(
             session  = getDefaultReactiveDomain(),
             inputId  = "location_info",
-            choices  = unique(reporting_tbl()$location_info),
-            selected = unique(reporting_tbl()$location_info[1])
+            choices  = unique(reporting_tbl()$loc_info),
+            selected = unique(reporting_tbl()$loc_info)
         )
     })
 
@@ -208,14 +229,14 @@ server <- function(input, output) {
         
         # Organization Name Picker Input
         org_names <- reporting_tbl() %>% 
-            filter(location_info %in% input$location_info) %>% 
-            select(organization_name)
+            filter(loc_info %in% input$location_info) %>% 
+            select(org_info)
         
         updatePickerInput(
             session  = getDefaultReactiveDomain(),
-            inputId  = "organization_name",
-            choices  = unique(org_names$organization_name),
-            selected = unique(org_names$organization_name)[1]
+            inputId  = "organization_info",
+            choices  = unique(org_names$org_info),
+            selected = unique(org_names$org_info)
         )
     })
     
@@ -224,32 +245,44 @@ server <- function(input, output) {
         
         # Program Names
         prog_names <- reporting_tbl() %>% 
-            filter(location_info %in% input$location_info) %>% 
-            filter(organization_name %in% input$organization_name) %>% 
-            select(program_name)
+            filter(loc_info %in% input$location_info) %>% 
+            filter(org_info %in% input$organization_info) %>% 
+            select(prog_info)
         
         updatePickerInput(
             session  = getDefaultReactiveDomain(),
-            inputId  = "program_name",
-            choices  = unique(prog_names$program_name),
-            selected = unique(prog_names$program_name[1])
+            inputId  = "program_info",
+            choices  = unique(prog_names$prog_info),
+            selected = unique(prog_names$prog_info)
         )
     })
     
-    # * Prediction Datatable ----
-    output$prediction_dt <- renderDataTable({
+    # * Toggle ----
+    shinyjs::onclick(id = "toggle", {
+        shinyjs::toggle(id = "inputs", anim = TRUE, animType = "slide")
+    })
+    
+    # * Apply Button ----
+    predictions_filtered_tbl <- eventReactive(input$apply, valueExpr = {
         reporting_tbl() %>% 
-            filter(location_info %in% input$location_info) %>% 
-            filter(organization_name %in% input$organization_name) %>% 
-            filter(program_name %in% input$program_name) %>% 
-            select(occupancy_date, program_model, sector, overnight_service_type,
+            arrange(occupancy_date) %>% 
+            filter(loc_info %in% input$location_info) %>% 
+            filter(org_info %in% input$organization_info) %>% 
+            filter(prog_info %in% input$program_info) %>% 
+            select(occupancy_date, location_id, program_id, shelter_id, sector, overnight_service_type,
                    capacity_type,pred_capacity_actual, pred_occupied_adj, 
                    pred_available, pred_fully_occupied_adj, pred_occupancy_rate_adj) %>% 
             mutate(pred_occupancy_rate_adj = scales::percent(pred_occupancy_rate_adj, accuracy = 0.02)) %>% 
             mutate(capacity_type = case_when(
                 str_detect(capacity_type, "Bed") ~ "Bed",
                 TRUE                             ~ "Room"
-            )) %>% 
+            )) %>%  
+            setNames(names(.) %>% str_remove_all("pred_")) 
+        
+    }, ignoreNULL = FALSE)
+    
+    output$prediction_dt <- renderDataTable({
+        predictions_filtered_tbl() %>%
             datatable(
                 options = list(
                     columnDefs = list(
@@ -260,12 +293,62 @@ server <- function(input, output) {
             )
     })
     
-    # * Toggle ----
-    shinyjs::onclick(id = "toggle", {
-        shinyjs::toggle(id = "inputs", anim = TRUE, animType = "slide")
+    # * Reset Button ----
+    observeEvent(eventExpr = input$reset, handlerExpr = {
+        
+        # location info
+        updatePickerInput(
+            session  = getDefaultReactiveDomain(),
+            inputId  = "location_info",
+            choices  = unique(reporting_tbl()$loc_info),
+            selected = unique(reporting_tbl()$loc_info)
+        )
+        
+        # org info
+        org_names <- reporting_tbl() %>% 
+            filter(loc_info %in% input$location_info) %>% 
+            select(org_info)
+        
+        updatePickerInput(
+            session  = getDefaultReactiveDomain(),
+            inputId  = "organization_info",
+            choices  = unique(org_names$org_info),
+            selected = unique(org_names$org_info)
+        )
+        
+        # program info
+        prog_names <- reporting_tbl() %>% 
+            filter(loc_info %in% input$location_info) %>% 
+            filter(org_info %in% input$organization_info) %>% 
+            select(prog_info)
+        
+        updatePickerInput(
+            session  = getDefaultReactiveDomain(),
+            inputId  = "program_info",
+            choices  = unique(prog_names$prog_info),
+            selected = unique(prog_names$prog_info)
+        )
+        
+        shinyjs::delay(ms = 300, expr = {
+            shinyjs::click(id = "apply")
+        })
+        
+        
     })
     
-    # * Apply Button ----
+    
+    # * Metadata Modal ----
+    observeEvent(input$mtd, {
+        showModal(
+            modalDialog(
+                textOutput("api_mtd"), 
+                textOutput("bq_mtd"),
+                size = "l", easyClose = TRUE, fade = TRUE,
+                footer = modalButton("Close (Esc)")
+            )
+        )
+    
+    })
  
 }
 
