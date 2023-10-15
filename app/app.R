@@ -16,76 +16,111 @@ library(shinyWidgets)
 library(shinyjs)
 
 
+
 # *****************************************************************************
 # **** ----
 # UI ----
 # *****************************************************************************
 # Define UI for the app
-ui <- dashboardPage(
-    dashboardHeader(
-        title = "Simple Shiny App",
-        # Message Menu ----
-        dropdownMenu(type = "messages",
-                     messageItem(
-                         from = "Sales Dept",
-                         message = "Sales are steady this month."
-                     ),
-                     messageItem(
-                         from = "New User",
-                         message = "How do I register?",
-                         icon = icon("question"),
-                         time = "13:45"
-                     ),
-                     messageItem(
-                         from = "Support",
-                         message = "The new server is ready.",
-                         icon = icon("life-ring"),
-                         time = "2014-12-01"
-                     )
-        )
-    ),
-    dashboardSidebar(
-        sidebarMenu(
-            menuItem("Home", tabName = "home", icon = icon("home")),
-            menuItem("Tab 1", tabName = "tab1", icon = icon("chart-bar"))
-        )
-    ),
-    dashboardBody(
-        tabItems(
-            tabItem(
-                tabName = "home",
-                h1("Welcome to the Home Page"),
-                p("This is the Home tab. You can put your home page content here.")
-            ),
-            tabItem(
-                tabName = "tab1",
-                h1("Predictions"),
-                hr(),
-                sidebarLayout(
-                    sidebarPanel(
-                        width = 2,
-                        br(),
-                        pickerInput(
-                            inputId  = "location_id",
-                            label    = "Location ID",
-                            choices  = NULL,
-                            multiple = TRUE,
-                            selected = NULL
+ui <- tagList(
+    useShinydashboard(),
+    shinyjs::useShinyjs(),
+    
+    navbarPage(
+        
+        tabPanel(
+            title = "Home", icon = icon("home"),
+            
+            fluidPage(
+                column(
+                    width = 12, offset = 1,
+                    p("Home Tab Placeholder")
+                )
+            )
+        ),
+        
+        tabPanel(
+            title = "Predictions",
+            fluidRow(
+                column(
+                    width = 10, offset = 1,
+                    div(
+                        class = "page-header",
+                        h1("Predictions"),
+                        actionButton("info", "Get Info", icon("info-circle"))
+                    )
+                ),
+                fluidRow(
+                    column(
+                        width = 10, offset = 1,
+                        wellPanel(
+                            fluidRow(
+                                div(
+                                    actionButton("toggle", "Toggle Inputs"),
+                                ),
+                                br(),
+                                div(
+                                    id = "inputs",
+                                    div(
+                                        class = "row",
+                                        div(
+                                            class = "col-md-2",
+                                            pickerInput(
+                                                inputId = "location",
+                                                label = "Location ID",
+                                                choices = c("Location 1", "Location 2", "Location 3"),
+                                                multiple = TRUE,
+                                                selected = NULL
+                                            )
+                                        ),
+                                        div(
+                                            class = "col-md-2",
+                                            pickerInput(
+                                                inputId = "org",
+                                                label = "Org ID",
+                                                choices = c("Org 1", "Org 2", "Org 3"),
+                                                multiple = TRUE,
+                                                selected = NULL
+                                            )
+                                        ),
+                                        div(
+                                            class = "col-md-2",
+                                            pickerInput(
+                                                inputId = "program",
+                                                label = "Program ID",
+                                                choices = c("Org 1", "Org 2", "Org 3"),
+                                                multiple = TRUE,
+                                                selected = NULL
+                                            )
+                                        ),
+                                        div(
+                                            class = "col-md-6",
+                                            p(strong("ETL Metadata")),
+                                            textOutput("api_mtd"),
+                                            textOutput("bq_mtd")
+                                        )
+                                    ),
+                                    div(
+                                        actionButton("apply", "Apply", icon = icon("play")),
+                                        actionButton("reset", "Reset", icon = icon("sync")),
+                                        
+                                    )
+                                ) %>% shinyjs::hidden()
+                            )
                         )
-                    ),
-                    
-                    mainPanel()
+                    )
+                ),
+                fluidRow(
+                    column(
+                        width = 10, offset = 1,
+                        p("placeholder")
+                    )
                 )
             )
         )
     )
 )
 
-server <- function(input, output) {
-    # Server logic here
-}
-
-shinyApp(ui, server)
 
 
 
@@ -98,7 +133,25 @@ shinyApp(ui, server)
 # *****************************************************************************
 server <- function(input, output) {
     
+    mtd_list <- reactive({
+        read_rds("artifacts/metadata_list.rds")
+    })
+    
+    output$api_mtd <- renderText({
+        mtd_list()[[1]]
+    })
+    
+    output$bq_mtd <- renderText({
+        mtd_list()[[2]]
+    })
+    
+    # * Toggle ----
+    shinyjs::onclick(id = "toggle", {
+        shinyjs::toggle(id = "inputs", anim = TRUE, animType = "slide")
+    })
  
 }
 
 shinyApp(ui, server)
+
+
