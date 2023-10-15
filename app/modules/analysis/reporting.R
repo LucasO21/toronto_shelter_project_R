@@ -1,31 +1,5 @@
-# REPORTING SCRIPT ----
-# *** ----
-
-# *****************************************************************************
-# SETUP ----
-# *****************************************************************************
-
-# * Set Working Dir ----
-setwd(here::here("scripts"))
-
-# * Libraries ----
-library(tidyverse)
-library(janitor)
-library(DT)
-library(data.table)
-library(bigrquery)
-library(tidymodels)
-library(h2o)
-
-# * Source ----
-source(file = "../functions/extract_shelter_data.R")
-
-# *****************************************************************************
-# **** ----
-# IMPORT PREDICTIONS ----
-# *****************************************************************************
-
-get_reporting_data_from_bq <- function() {
+get_reporting_data_from_bq <-
+function() {
     
     # Prediction Data
     reporting_tbl <- dplyr::tbl(
@@ -37,16 +11,8 @@ get_reporting_data_from_bq <- function() {
     return(reporting_tbl)
     
 }
-
-reporting_tbl <- get_reporting_data_from_bq()
-
-
-# *****************************************************************************
-# **** ----
-# FORMAT PREDICTIONS ----
-# *****************************************************************************
-
-get_reporting_data <- function(data, location = NULL) {
+get_reporting_data <-
+function(data, location = NULL) {
     
     # Filter for Location
     if (is.null(location)) {
@@ -106,31 +72,3 @@ get_reporting_data <- function(data, location = NULL) {
     
     
 }
-
-get_reporting_data(reporting_tbl)
-
-
-# *****************************************************************************
-# **** ----
-# SAVE FUNCTIONS ----
-# *****************************************************************************
-
-dump(
-    list = c("get_reporting_data_from_bq", "get_reporting_data"),
-    file = "../functions/reporting.R",
-    append = FALSE
-)
-
-
-dump(
-    list = c("get_reporting_data_from_bq", "get_reporting_data"),
-    file = "../app/modules/analysis/reporting.R",
-    append = FALSE
-)
-
-
-
-
-
-
-

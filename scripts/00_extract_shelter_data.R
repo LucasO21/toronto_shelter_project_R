@@ -246,3 +246,9 @@ dump(
     file   = "../functions/extract_shelter_data.R",
     append = FALSE
 )
+
+dump(
+    list   = c("get_shelter_data", "get_bigquery_upload", "get_bigquery_connection"),
+    file   = "../app/modules/analysis/extract_shelter_data.R",
+    append = FALSE
+)
