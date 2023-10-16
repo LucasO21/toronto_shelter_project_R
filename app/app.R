@@ -26,6 +26,8 @@ source(file = "modules/app/ui_server_modules.R")
 source(file = "modules/analysis/reporting.R")
 source(file = "modules/analysis/extract_shelter_data.R")
 
+source(file = "modules/app/prediction_info_button.R")
+
 # *****************************************************************************
 # **** ----
 # UI ----
@@ -58,7 +60,8 @@ ui <- tagList(
                     div(
                         class = "page-header",
                         h1("Predictions"),
-                        actionButton("info", "Get Info", icon("info-circle"))
+                        #actionButton("info", "Get Info", icon("info-circle"))
+                        prediction_info_button_UI("pred_tab_info")
                     )
                 )
             ),
@@ -214,6 +217,11 @@ ui <- tagList(
 # SERVER ----
 # *****************************************************************************
 server <- function(input, output) {
+    
+    # ** Info Button ----
+   observeEvent(input[["pred_tab_info-info"]], {
+       prediction_info_button_Server("pred_tab_info")
+   })
     
     # Metadata
     mtd_list <- reactive({
