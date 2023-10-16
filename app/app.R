@@ -64,10 +64,11 @@ ui <- tagList(
                 fluidRow(
                     column(
                         width = 10, offset = 1,
+                        padding = "10px",
                         wellPanel(
                             fluidRow(
                                 div(
-                                    actionButton("toggle", "Toggle Inputs"),
+                                    actionButton("toggle", "Toggle Inputs")
                                 ),
                                 br(),
                                 div(
@@ -133,7 +134,7 @@ ui <- tagList(
                                         actionButton("apply", "Apply", icon = icon("play"), width = "140px"),
                                         actionButton("reset", "Reset", icon = icon("sync"), width = "140px"),
                                         actionButton("download", "Download Data", icon = icon("download"), width = "140px"),
-                                        actionButton("mtd", "Metadata", icon = icon("data"), width = "140px"),
+                                        actionButton("mtd", "Metadata", icon = icon("info-circle"), width = "140px")
                                         
                                     )
                                 ) %>% shinyjs::hidden()
@@ -144,11 +145,8 @@ ui <- tagList(
                 fluidRow(
                     column(
                         width = 12, offset = 1,
-                        div(
-                            h3("Selected Location Info"),
-                            textOutput("location_info")
-                            
-                        ),
+                        
+                        br(),
                        
                         div(
                             box(
@@ -167,9 +165,7 @@ ui <- tagList(
                             )
                         )
                     )
-                ),
-                p("Test Area"),
-                tableOutput("reporting")
+                )
             )
         )
     )
@@ -206,11 +202,43 @@ server <- function(input, output) {
            select(-c(x_id, pkey)) %>% 
            mutate(loc_info = paste(location_id, ": ", location_name), .before = shelter_id) %>% 
            mutate(org_info = paste(organization_id, ": ", organization_name), .before = shelter_id) %>% 
-           mutate(prog_info = paste(program_id, ": ", program_name), .before = shelter_id)
+           mutate(prog_info = paste(program_id, ": ", program_name), .before = shelter_id) %>% 
+           mutate(fmt = case_when(
+               pred_occupancy_rate_adj <= 0.80 ~ "green",
+               pred_occupancy_rate_adj <= 0.90 ~ "orange",
+               TRUE                            ~ "red"
+           ))
        
        tbl
        
     })
+    
+    # * Apply Button ----
+    predictions_filtered_tbl <- eventReactive(input$apply, valueExpr = {
+        #reactive({
+        reporting_tbl() %>% 
+            arrange(occupancy_date) %>% 
+            filter(loc_info %in% input$location_info) %>% 
+            filter(org_info %in% input$organization_info) %>%
+            filter(prog_info %in% input$program_info) %>%
+            select(occupancy_date, location_id, program_id, shelter_id, sector, overnight_service_type,
+                   capacity_type,pred_capacity_actual, pred_occupied_adj, 
+                   pred_available, pred_fully_occupied_adj, pred_occupancy_rate_adj, fmt) %>% 
+            mutate(pred_occupancy_rate_adj = scales::percent(pred_occupancy_rate_adj, accuracy = 0.02)) %>% 
+            mutate(capacity_type = case_when(
+                str_detect(capacity_type, "Bed") ~ "Bed",
+                TRUE                             ~ "Room"
+            ))
+            #setNames(names(.) %>% str_remove_all("pred_")) 
+        # })
+    }, ignoreNULL = FALSE)
+    
+    observeEvent(input$location_info, {
+        shinyjs::delay(ms = 100, expr = {
+            shinyjs::click(id = "apply")
+        })
+    }, once = TRUE)
+    
     
     
     # * Location Info Picker Update ----
@@ -222,33 +250,32 @@ server <- function(input, output) {
             selected = unique(reporting_tbl()$loc_info)
         )
     })
-
     
     # * Organization Name Picker Update ----
     shiny::observeEvent(input$location_info, {
-        
+
         # Organization Name Picker Input
-        org_names <- reporting_tbl() %>% 
-            filter(loc_info %in% input$location_info) %>% 
+        org_names <- reporting_tbl() %>%
+            filter(loc_info %in% input$location_info) %>%
             select(org_info)
-        
+
         updatePickerInput(
             session  = getDefaultReactiveDomain(),
             inputId  = "organization_info",
             choices  = unique(org_names$org_info),
             selected = unique(org_names$org_info)
         )
-    })
-    
+    }, ignoreNULL = FALSE)
+
     # * Program Name Picker Update ----
-    shiny::observe({#input$location_info, {
-        
+    shiny::observe({
+
         # Program Names
-        prog_names <- reporting_tbl() %>% 
-            filter(loc_info %in% input$location_info) %>% 
-            filter(org_info %in% input$organization_info) %>% 
+        prog_names <- reporting_tbl() %>%
+            filter(loc_info %in% input$location_info) %>%
+            filter(org_info %in% input$organization_info) %>%
             select(prog_info)
-        
+
         updatePickerInput(
             session  = getDefaultReactiveDomain(),
             inputId  = "program_info",
@@ -262,36 +289,28 @@ server <- function(input, output) {
         shinyjs::toggle(id = "inputs", anim = TRUE, animType = "slide")
     })
     
-    # * Apply Button ----
-    predictions_filtered_tbl <- eventReactive(input$apply, valueExpr = {
-        reporting_tbl() %>% 
-            arrange(occupancy_date) %>% 
-            filter(loc_info %in% input$location_info) %>% 
-            filter(org_info %in% input$organization_info) %>% 
-            filter(prog_info %in% input$program_info) %>% 
-            select(occupancy_date, location_id, program_id, shelter_id, sector, overnight_service_type,
-                   capacity_type,pred_capacity_actual, pred_occupied_adj, 
-                   pred_available, pred_fully_occupied_adj, pred_occupancy_rate_adj) %>% 
-            mutate(pred_occupancy_rate_adj = scales::percent(pred_occupancy_rate_adj, accuracy = 0.02)) %>% 
-            mutate(capacity_type = case_when(
-                str_detect(capacity_type, "Bed") ~ "Bed",
-                TRUE                             ~ "Room"
-            )) %>%  
-            setNames(names(.) %>% str_remove_all("pred_")) 
-        
-    }, ignoreNULL = FALSE)
+
     
+    
+    # * Prediction Datatable ----
     output$prediction_dt <- renderDataTable({
         predictions_filtered_tbl() %>%
             datatable(
                 options = list(
                     columnDefs = list(
-                        list(className = "dt-center", targets = c(6:10))
-                        #list(width = "200", targets = 3)
+                        list(className = "dt-center", targets = c(8:12)),
+                        list(visible = FALSE, targets = c(13))
                     )
+                )
+            ) %>% 
+            formatStyle(
+                "pred_occupancy_rate_adj", "fmt", 
+                backgroundColor = styleEqual(
+                    c("green", "orange", "red"), c("#93c47d", "#ffe599", "#ea9999")
                 )
             )
     })
+
     
     # * Reset Button ----
     observeEvent(eventExpr = input$reset, handlerExpr = {
@@ -353,5 +372,6 @@ server <- function(input, output) {
 }
 
 shinyApp(ui, server)
+
 
 
