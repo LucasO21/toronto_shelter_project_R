@@ -60,113 +60,145 @@ ui <- tagList(
                         h1("Predictions"),
                         actionButton("info", "Get Info", icon("info-circle"))
                     )
-                ),
-                fluidRow(
-                    column(
-                        width = 10, offset = 1,
-                        padding = "10px",
-                        wellPanel(
-                            fluidRow(
+                )
+            ),
+            fluidRow(
+                column(
+                    width = 10, offset = 1,
+                    padding = "10px",
+                    wellPanel(
+                        fluidRow(
+                            div(
+                                actionButton("toggle", "Toggle Inputs")
+                            ),
+                            br(),
+                            div(
+                                id = "inputs",
                                 div(
-                                    actionButton("toggle", "Toggle Inputs")
-                                ),
-                                br(),
-                                div(
-                                    id = "inputs",
+                                    class = "row",
                                     div(
-                                        class = "row",
-                                        div(
-                                            class = "col-md-2",
-                                            pickerInput(
-                                                inputId  = "location_info",
-                                                label    = "Location Info",
-                                                choices  = NULL,
-                                                multiple = TRUE,
-                                                selected = NULL,
-                                                options = list(
-                                                    `actions-box` = TRUE,
-                                                    `deselect-all-text` = "Deselect All",
-                                                    `select-all-text` = "Select All",
-                                                    `none-selected-text` = "Nothing Selected",
-                                                    `selected-text-format` = "count > 1"
-                                                )
-                                            )
-                                            #uiOutput("location_id_picker_input")
-                                        
-                                        ),
-                                        div(
-                                            class = "col-md-2",
-                                            pickerInput(
-                                                inputId  = "organization_info",
-                                                label    = "Organization Info",
-                                                choices  = NULL,
-                                                multiple = TRUE,
-                                                selected = NULL,
-                                                options = list(
-                                                    `actions-box` = TRUE,
-                                                    `deselect-all-text` = "Deselect All",
-                                                    `select-all-text` = "Select All",
-                                                    `none-selected-text` = "Nothing Selected",
-                                                    `selected-text-format` = "count > 1"
-                                                )
-                                            )
-                                            #uiOutput("organization_id_picker_input")
-                                        ),
-                                        div(
-                                            class = "col-md-3",
-                                            pickerInput(
-                                                inputId  = "program_info",
-                                                label    = "Program Info",
-                                                choices  = NULL,
-                                                multiple = TRUE,
-                                                selected = NULL,
-                                                options = list(
-                                                    `actions-box` = TRUE,
-                                                    `deselect-all-text` = "Deselect All",
-                                                    `select-all-text` = "Select All",
-                                                    `none-selected-text` = "Nothing Selected",
-                                                    `selected-text-format` = "count > 1"
-                                                )
-                                            )
+                                        class = "col-md-2",
+                                        dateRangeInput(
+                                            inputId = "date_info",
+                                            label   = "Date",
+                                            start   = NULL,
+                                            end     = NULL,
+                                            min     = NULL,
+                                            max     = NULL
                                         )
+                                      
+                                        
                                     ),
                                     div(
-                                        actionButton("apply", "Apply", icon = icon("play"), width = "140px"),
-                                        actionButton("reset", "Reset", icon = icon("sync"), width = "140px"),
-                                        actionButton("download", "Download Data", icon = icon("download"), width = "140px"),
-                                        actionButton("mtd", "Metadata", icon = icon("info-circle"), width = "140px")
-                                        
+                                        class = "col-md-2",
+                                        pickerInput(
+                                            inputId  = "location_info",
+                                            label    = "Location Info",
+                                            choices  = NULL,
+                                            multiple = TRUE,
+                                            selected = NULL,
+                                            options = list(
+                                                `actions-box` = TRUE,
+                                                `deselect-all-text` = "Deselect All",
+                                                `select-all-text` = "Select All",
+                                                `none-selected-text` = "Nothing Selected",
+                                                `selected-text-format` = "count > 1"
+                                            )
+                                        )
+                                        #uiOutput("location_id_picker_input")
+                                    
+                                    ),
+                                    div(
+                                        class = "col-md-2",
+                                        pickerInput(
+                                            inputId  = "organization_info",
+                                            label    = "Organization Info",
+                                            choices  = NULL,
+                                            multiple = TRUE,
+                                            selected = NULL,
+                                            options = list(
+                                                `actions-box` = TRUE,
+                                                `deselect-all-text` = "Deselect All",
+                                                `select-all-text` = "Select All",
+                                                `none-selected-text` = "Nothing Selected",
+                                                `selected-text-format` = "count > 1"
+                                            )
+                                        )
+                                        #uiOutput("organization_id_picker_input")
+                                    ),
+                                    div(
+                                        class = "col-md-3",
+                                        pickerInput(
+                                            inputId  = "program_info",
+                                            label    = "Program Info",
+                                            choices  = NULL,
+                                            multiple = TRUE,
+                                            selected = NULL,
+                                            options = list(
+                                                `actions-box` = TRUE,
+                                                `deselect-all-text` = "Deselect All",
+                                                `select-all-text` = "Select All",
+                                                `none-selected-text` = "Nothing Selected",
+                                                `selected-text-format` = "count > 1"
+                                            )
+                                        )
                                     )
-                                ) %>% shinyjs::hidden()
-                            )
+                                ),
+                                div(
+                                    actionButton("apply", "Apply", icon = icon("play"), width = "140px"),
+                                    actionButton("reset", "Reset", icon = icon("sync"), width = "140px"),
+                                    actionButton("download", "Download Data", icon = icon("download"), width = "140px"),
+                                    actionButton("mtd", "Metadata", icon = icon("info-circle"), width = "140px")
+                                    
+                                )
+                            ) %>% shinyjs::hidden()
                         )
                     )
-                ),
-                fluidRow(
-                    column(
-                        width = 12, offset = 1,
-                        
-                        br(),
-                       
-                        div(
-                            box(
-                                width = 10,
-                                solidHeader = TRUE,
-                                rounded = TRUE,
-                                h3("Predictions", tags$span(id = "pred_dt"), icon("info-circle")),
-                                status = "info",
-                                dataTableOutput("prediction_dt")
-                            ),
-                            bsPopover(
-                                id = "pred_dt",
-                                title = "Predictions",
-                                content = "Shelter overninght occupancy for the next 5 days",
-                                placement = "left"
-                            )
+                )
+            ),
+            fluidRow(
+                column(
+                    width = 10, offset = 1,
+                    
+                    br(),
+                   
+                    div(
+                        box(
+                            width = 12,
+                            solidHeader = TRUE,
+                            rounded = TRUE,
+                            h3("Predictions", tags$span(id = "pred_dt"), icon("info-circle")),
+                            status = "info",
+                            dataTableOutput("prediction_dt")
+                        ),
+                        bsPopover(
+                            id = "pred_dt",
+                            title = "Predictions",
+                            content = "Shelter overninght occupancy for the next 5 days",
+                            placement = "left"
                         )
                     )
                 )
             )
+            #)
+        ),
+        
+        # Accuracy Tab
+        tabPanel(
+            title = "Accuracy",
+            
+            fluidRow(
+                column(
+                    width = 10, offset = 1,
+                    div(
+                        class = "page-header",
+                        h1("Accuracy"),
+                        p("Coming Soon..."),
+                        actionButton("info", "Get Info", icon("info-circle"))
+                    )
+                )
+            )
+            
         )
     )
 )
@@ -218,6 +250,7 @@ server <- function(input, output) {
         #reactive({
         reporting_tbl() %>% 
             arrange(occupancy_date) %>% 
+            filter(occupancy_date %>% between(input$date_info[1], input$date_info[2])) %>% 
             filter(loc_info %in% input$location_info) %>% 
             filter(org_info %in% input$organization_info) %>%
             filter(prog_info %in% input$program_info) %>%
@@ -248,6 +281,18 @@ server <- function(input, output) {
             inputId  = "location_info",
             choices  = unique(reporting_tbl()$loc_info),
             selected = unique(reporting_tbl()$loc_info)
+        )
+    })
+    
+    # * Date Picker Update ----
+    shiny::observe({
+        updateDateRangeInput(
+            session  = getDefaultReactiveDomain(),
+            inputId  = "date_info",
+            start    = min(reporting_tbl()$occupancy_date),
+            end      = max(reporting_tbl()$occupancy_date),
+            min      = min(reporting_tbl()$occupancy_date),
+            max      = max(reporting_tbl()$occupancy_date)
         )
     })
     
