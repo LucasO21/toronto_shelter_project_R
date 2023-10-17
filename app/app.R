@@ -22,10 +22,11 @@ library(shinyBS)
 library(htmlwidgets)
 
 # * Source ----
-source(file = "modules/app/ui_server_modules.R")
+
 source(file = "modules/analysis/reporting.R")
 source(file = "modules/analysis/extract_shelter_data.R")
 
+source(file = "modules/app/ui_server_modules.R")
 source(file = "modules/app/prediction_info_button.R")
 
 # *****************************************************************************
@@ -36,18 +37,35 @@ source(file = "modules/app/prediction_info_button.R")
 ui <- tagList(
     useShinydashboard(),
     shinyjs::useShinyjs(),
-    tags$head(tags$style(HTML(".box.box-info > .box-header {background-color: #95a5a6 !important;}"))),
-    tags$head(tags$style(HTML(".box {border-color: #95a5a6 !important;}"))),
+    tags$head(tags$style(HTML(".box.box-info > .box-header {background-color: ##ecf0f1 !important;}"))),
+    tags$head(tags$style(HTML(".box {border-color: #ecf0f1 !important;}"))),
+    tags$style(".custom-modal .modal-dialog {width: 100%;}"),
+    tags$script(src="https://kit.fontawesome.com/77fcf700e6.js"),
+#     tags$style("
+#   .custom-value-box .small-box {
+#     background-color: white !important;
+#     border: 2px solid #2c3e50 !important;
+#   }
+# 
+#   .custom-value-box .small-box h3,
+#   .custom-value-box .small-box p {
+#     color: #2c3e50 !important;
+#   }
+# "),
+includeCSS("www/styles.css"),
+
+    
     
     navbarPage(
+      theme = shinytheme("flatly"),
         
         tabPanel(
             title = "Home", icon = icon("home"),
             
             fluidPage(
                 column(
-                    width = 12, offset = 1,
-                    p("Home Tab Placeholder")
+                    width = 12, offset = 1
+                    #p("Home Tab Placeholder")
                 )
             )
         ),
@@ -108,7 +126,7 @@ ui <- tagList(
                                                 `selected-text-format` = "count > 1"
                                             )
                                         )
-                                        #uiOutput("location_id_picker_input")
+                                       
                                     
                                     ),
                                     div(
@@ -159,6 +177,23 @@ ui <- tagList(
                     )
                 )
             ),
+            
+            # * Value Boxes Fluid Row ----
+            fluidRow(
+              column(
+                width = 12, offset = 1,
+                column(
+                  width = 9, 
+                  value_box_UI("pred_capacity_bed"),
+                  value_box_UI("pred_occupied_bed"),
+                  value_box_UI("pred_capacity_room"),
+                  value_box_UI("pred_occupied_room")
+                )
+                #column(width = 6, value_box_UI("pred_occupied_bed"))
+              )
+             
+            ),
+            
             fluidRow(
                 column(
                     width = 10, offset = 1,
@@ -167,7 +202,7 @@ ui <- tagList(
                    
                     div(
                         box(
-                            width = 12,
+                            width = 13,
                             solidHeader = TRUE,
                             rounded = TRUE,
                             h3("Predictions", tags$span(id = "pred_dt"), icon("info-circle")),
@@ -291,6 +326,13 @@ server <- function(input, output) {
             selected = unique(reporting_tbl()$loc_info)
         )
     })
+    
+    # Placeholder (Module)
+    # picker_input_Server(
+    #     id   = "loc_info-picker",
+    #     data = reporting_tbl(),
+    #     col  = "loc_info" 
+    # )
     
     # * Date Picker Update ----
     shiny::observe({
@@ -421,6 +463,56 @@ server <- function(input, output) {
         )
     
     })
+    
+    # * Value Boxes
+    # output$pred_actual <- renderValueBox({
+    #   
+    #   valueBox(
+    #     predictions_filtered_tbl() %>% 
+    #           filter(capacity_type == "Bed") %>% 
+    #           pull(pred_capacity_actual) %>% 
+    #           sum() %>% 
+    #           scales::comma(), 
+    #         
+    #     "Pred Bed Capacity",
+    #     icon = icon("bed", lib = "font-awesome")
+    #     
+    #   )
+    # })
+    
+    value_box_Server(
+      id        = "pred_capacity_bed",
+      data      = predictions_filtered_tbl,
+      sum_col   = "pred_capacity_actual",
+      sub_title = reactive("Predicted Capacity Beds"),
+      icon      = "bed"
+    )
+
+    value_box_Server(
+      id           = "pred_occupied_bed",
+      data         = predictions_filtered_tbl,
+      sum_col      = "pred_occupied_adj",
+      sub_title    = reactive("Predicted Occupied Beds"),
+      icon         = "bed"
+    )
+    
+    value_box_Server(
+      id           = "pred_capacity_room",
+      data         = predictions_filtered_tbl,
+      filter_value = "Room",
+      sum_col      = "pred_capacity_actual",
+      sub_title    = reactive("Predicted Capacity Rooms"),
+      icon         = "person-shelter"
+    )
+    
+    value_box_Server(
+      id           = "pred_occupied_room",
+      data         = predictions_filtered_tbl,
+      filter_value = "Room",
+      sum_col      = "pred_occupied_adj",
+      sub_title    = reactive("Predicted Occupied Rooms"),
+      icon         = "person-shelter"
+    )
  
 }
 
