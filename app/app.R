@@ -181,13 +181,24 @@ includeCSS("www/styles.css"),
             # * Value Boxes Fluid Row ----
             fluidRow(
               column(
-                width = 12, offset = 1,
+                width = 10, offset = 1,
+                fluidRow(
+                  column(width = 4, value_box_UI("pred_capacity_bed")),
+                  column(width = 4, value_box_UI("pred_occupied_bed")),
+                  column(width = 4, value_box_UI("pred_rate_bed"))
+                )
+              )
+            ),
+            
+            fluidRow(
+              column(
+                width = 10, offset = 1,
                 column(
-                  width = 9, 
-                  value_box_UI("pred_capacity_bed"),
-                  value_box_UI("pred_occupied_bed"),
-                  value_box_UI("pred_capacity_room"),
-                  value_box_UI("pred_occupied_room")
+                  width = 9
+                  # value_box_UI("pred_capacity_bed"),
+                  # value_box_UI("pred_occupied_bed"),
+                  # value_box_UI("pred_capacity_room"),
+                  # value_box_UI("pred_occupied_room")
                 )
                 #column(width = 6, value_box_UI("pred_occupied_bed"))
               )
@@ -483,7 +494,7 @@ server <- function(input, output) {
     value_box_Server(
       id        = "pred_capacity_bed",
       data      = predictions_filtered_tbl,
-      sum_col   = "pred_capacity_actual",
+      value     = reactive("capacity_bed"),
       sub_title = reactive("Predicted Capacity Beds"),
       icon      = "bed"
     )
@@ -491,28 +502,27 @@ server <- function(input, output) {
     value_box_Server(
       id           = "pred_occupied_bed",
       data         = predictions_filtered_tbl,
-      sum_col      = "pred_occupied_adj",
+      value        = reactive("occupied_bed"),
       sub_title    = reactive("Predicted Occupied Beds"),
       icon         = "bed"
     )
     
     value_box_Server(
-      id           = "pred_capacity_room",
+      id           = "pred_rate_bed",
       data         = predictions_filtered_tbl,
-      filter_value = "Room",
-      sum_col      = "pred_capacity_actual",
+      value        = reactive("bed_rate"),
       sub_title    = reactive("Predicted Capacity Rooms"),
       icon         = "person-shelter"
     )
     
-    value_box_Server(
-      id           = "pred_occupied_room",
-      data         = predictions_filtered_tbl,
-      filter_value = "Room",
-      sum_col      = "pred_occupied_adj",
-      sub_title    = reactive("Predicted Occupied Rooms"),
-      icon         = "person-shelter"
-    )
+    # value_box_Server(
+    #   id           = "pred_occupied_room",
+    #   data         = predictions_filtered_tbl,
+    #   filter_value = "Room",
+    #   sum_col      = "pred_occupied_adj",
+    #   sub_title    = reactive("Predicted Occupied Rooms"),
+    #   icon         = "person-shelter"
+    # )
  
 }
 

@@ -5,13 +5,12 @@ value_box_UI <- function(id) {
   tagList(
       div(
           class = "custom-value-box", 
-          valueBoxOutput(ns("value_box"))
+          valueBoxOutput(ns("value_box"), width = "50px")
       )
   )
 }
 
-value_box_Server <- function(id, data = reactive(NULL), filter_col = "capacity_type", 
-                             filter_value = "Bed", sum_col = NULL,
+value_box_Server <- function(id, data = reactive(NULL), value = reactive(NULL), 
                              sub_title = reactive(NULL), icon = NULL) {
     moduleServer(
         id,
@@ -19,14 +18,28 @@ value_box_Server <- function(id, data = reactive(NULL), filter_col = "capacity_t
             
             output$value_box <- renderValueBox({
                 
-                value <- shiny::req(data()) %>% 
-                    filter(!!rlang::sym(filter_col) == filter_value) %>% 
-                    pull(!!rlang::sym(sum_col)) %>% 
-                    sum() %>% 
-                    scales::comma()
+                # value <- shiny::req(data()) %>% 
+                #     filter(!!rlang::sym(filter_col) == filter_value) %>% 
+                #     pull(!!rlang::sym(sum_col)) %>% 
+                #     sum() %>% 
+                #     scales::comma()
+                
+                value_tbl <- shiny::req(data()) %>% 
+                    dplyr::summarise(
+                        sum_capacity = sum(pred_capacity_actual),
+                        sum_occupied = sum(pred_occupied_adj),
+                        .by = capacity_type
+                    )
+                
+                v <- switch(
+                    shiny::req(value()),
+                    "capacity_bed" = pull(value_tbl[1, ][2]),
+                    "occupied_bed" = pull(value_tbl[1, ][3]),
+                    "bed_rate"     = pull(value_tbl[1, ][3] / value_tbl[1, ][2]) %>% scales::percent()
+                )
                 
                 valueBox(
-                    value    = value,
+                    value    = v,
                     subtitle = sub_title(),
                     icon     = icon(icon, lib = "font-awesome")
                 )
