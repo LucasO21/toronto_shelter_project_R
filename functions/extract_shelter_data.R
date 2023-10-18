@@ -36,23 +36,23 @@ function(year = 2023) {
     }
     
     # max date
-    max_date <- max(df$occupancy_date)
-    
-    # filter
-    ret <- df %>% filter(occupancy_date > max_date - 1)
+    # max_date <- max(df$occupancy_date)
+    # 
+    # # filter
+    # ret <- df %>% filter(occupancy_date > max_date - 1)
     
     # Metadata
     mtd <- str_glue(
         "Metadata (Open Data Toronto API):
-            Rows: {nrow(ret)}
-            Cols: {ncol(ret)}
-            Date: {unique(ret$occupancy_date)}"
+            Rows: {nrow(df)}
+            Cols: {ncol(df)}
+            Date: {min(df$occupancy_date)} - {max(df$occupancy_date)}"
     )
     
     # Message
     message(mtd)
     
-    return(list(data = ret, metadata = mtd))
+    return(list(data = df, metadata = mtd))
 }
 get_bigquery_upload <-
 function(values, 
