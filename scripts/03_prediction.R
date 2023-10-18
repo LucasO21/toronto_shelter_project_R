@@ -85,7 +85,7 @@ get_prediction_features_from_bq <- function(table_name) {
         "shelter pred data info:
             min date: {min(shelter_pred_tbl$occupancy_date)}
             max date: {max(shelter_pred_tbl$occupancy_date)}
-        ==============================================================
+        
         weather forecast data info:
             min date: {min(weather_forecast_tbl_final$date)}
             max date: {max(weather_forecast_tbl_final$date)}
@@ -104,9 +104,9 @@ get_prediction_features_from_bq <- function(table_name) {
 
 pred_features_data_list <- get_prediction_features_from_bq()
 
-pred_features_data_list[[1]] %>% glimpse()
-
-pred_features_data_list[[2]]
+# pred_features_data_list[[1]] %>% glimpse()
+# 
+# pred_features_data_list[[2]]
 
 # *****************************************************************************
 # **** ----
@@ -132,9 +132,9 @@ pred_features_combined_tbl <- get_prediction_features_combined(
 ) %>% 
     select(-pkey)
 
-pred_features_combined %>% glimpse()
-
-pred_features_combined %>% sapply(function(x) sum(is.na(x)))
+# pred_features_combined %>% glimpse()
+# 
+# pred_features_combined %>% sapply(function(x) sum(is.na(x)))
 
 
 # *****************************************************************************
@@ -308,7 +308,7 @@ get_bigquery_upload(
 
 dump(
     list = c(
-        "get_predictions_features_from_bq",
+        "get_prediction_features_from_bq",
         "get_prediction_features_combined",
         "get_prediction_recipes",
         "get_predictions",

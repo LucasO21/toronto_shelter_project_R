@@ -1,4 +1,4 @@
-get_predictions_features_from_bq <-
+get_prediction_features_from_bq <-
 function(table_name) {
     
     # con
@@ -23,26 +23,45 @@ function(table_name) {
     weather_forecast_tbl <- dplyr::tbl(con, "feature_weather_forecast") %>% 
         collect()
     
-    weather_forecast_tbl <- weather_forecast_tbl %>% 
-        bind_rows(
-            tibble(
-                date     = max(weather_forecast_tbl$date + 1),
-                temp_min = mean(weather_forecast_tbl$temp_min),
-                temp_max = mean(weather_forecast_tbl$temp_max),
-                temp_avg = mean(weather_forecast_tbl$temp_avg)
+    # distinct shelter forecast dates
+    weather_forecast_tbl_2 <- tibble(
+        date = unique(shelter_pred_tbl$occupancy_date)
+    ) %>% 
+        arrange(date) %>% 
+        left_join(
+            weather_forecast_tbl
+        )
+    
+    if (any(is.na(weather_forecast_tbl_2$temp_min))) {
+        
+        date_missing <- weather_forecast_tbl_2 %>% filter(is.na(temp_min)) %>% pull(date)
+        
+        weather_forecast_tbl_final <- weather_forecast_tbl %>% 
+            bind_rows(
+                tibble(
+                    date     = max(date_missing),
+                    temp_min = mean(weather_forecast_tbl$temp_min),
+                    temp_max = mean(weather_forecast_tbl$temp_max),
+                    temp_avg = mean(weather_forecast_tbl$temp_avg)
+                )
+                
             )
             
-        )
+    } else {
+        weather_forecast_tbl_final <- weather_forecast_tbl_2
+    }
+    
+
     
     # message
     message(str_glue(
         "shelter pred data info:
             min date: {min(shelter_pred_tbl$occupancy_date)}
             max date: {max(shelter_pred_tbl$occupancy_date)}
-        ==============================================================
+        
         weather forecast data info:
-            min date: {min(weather_forecast_tbl$date)}
-            max date: {max(weather_forecast_tbl$date)}
+            min date: {min(weather_forecast_tbl_final$date)}
+            max date: {max(weather_forecast_tbl_final$date)}
         "
     ))
     
@@ -50,7 +69,7 @@ function(table_name) {
     return(
         list(
             shelter_pred_tbl     = shelter_pred_tbl,
-            weather_forecast_tbl = weather_forecast_tbl
+            weather_forecast_tbl = weather_forecast_tbl_final
         )
     )
     
@@ -61,14 +80,22 @@ function(shelter_features, weather_features) {
     ret <- shelter_features %>% 
         left_join(
             weather_features,
-            by = c("occupancy_date" = "date"),
-            relationship = "many-to-many"
+            by = c("occupancy_date" = "date")
+            #relationship = "one-to-many"
         )
     
     return(ret)
 }
 get_prediction_recipes <-
 function(data) {
+    
+    # h2o init
+    h2o.init()
+    
+    # h2o init check
+    if (!h2o::h2o.clusterIsUp()) {
+        stop("H2O failed to start.")
+    }
     
     # * Prob ----
     prob_tbl <- get_automl_recipes(data) %>% 
@@ -81,6 +108,12 @@ function(data) {
         prep() %>% 
         juice() %>% 
         as.h2o()
+    
+    # recipe checks
+    if (!inherits(prob_tbl, "H2OFrame")) {
+        stop("Data processing for prob_tbl failed.", call. = FALSE)
+    }
+    
     
     # return
     return(
@@ -139,7 +172,7 @@ function(raw_data, pred_data) {
     
     # Data Formatted
     ret <- raw_data %>% 
-        select(occupancy_date, location_id, capacity_actual) %>% 
+        # select(occupancy_date, location_id, capacity_actual) %>% 
         bind_cols(pred_data) %>% 
         rename(pred_capacity_actual = capacity_actual) %>% 
         rename(pred_fully_occupied = pred_occupancy_rate) %>% 
@@ -158,7 +191,13 @@ function(raw_data, pred_data) {
             pred_fully_occupied != pred_fully_occupied_adj ~ "No Match",
             TRUE                                           ~ "Match"
         )) %>% 
-        mutate(pred_time = formatted_time_est)
+        mutate(pred_time = formatted_time_est) %>% 
+        select(
+            x_id, occupancy_date, pkey, starts_with("organization"),
+            starts_with("shelter"), starts_with("location"), 
+            program_id, program_name, starts_with("program"), sector, 
+            overnight_service_type, capacity_type, starts_with("pred"), everything()
+        ) 
     
     # Message
     message(str_glue(

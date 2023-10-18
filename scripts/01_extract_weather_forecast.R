@@ -99,10 +99,19 @@ get_data <- function(data) {
     return(ret)
 }
 
-get_request_url() %>% 
+weather_forecast_tbl <- get_request_url() %>% 
     get_request() %>% 
     get_data()
 
+
+# * Upload to Big Query ----
+get_bigquery_upload(
+    values  = weather_forecast_tbl,
+    project = "toronto-shelter-project",
+    dataset = "data_features",
+    table   = "feature_weather_forecast",
+    write_disposition = "WRITE_APPEND"
+)
 
 
 # *****************************************************************************
