@@ -36,7 +36,7 @@ get_bigquery_connection <- function (project = "toronto-shelter-project",
     return(con)
 }
 
-con <- get_bigquery_connection()
+# con <- get_bigquery_connection()
 
 # * Extract Shelter Data ----
 get_shelter_data <- function(year = 2023) {
@@ -99,10 +99,12 @@ shelter_raw_tbl <- get_shelter_data()[[1]]
 
 
 # * Load to Big Query ----
-get_bigquery_upload <- function(values, project = "toronto-shelter-project", 
-                                dataset = "data_raw", table = NULL,
+get_bigquery_upload <- function(values, 
+                                project            = "toronto-shelter-project", 
+                                dataset            = "data_raw", 
+                                table              = NULL,
                                 create_disposition = "CREATE_IF_NEEDED",
-                                write_disposition = "WRITE_APPEND") {
+                                write_disposition  = "WRITE_APPEND") {
     
     # Validate parameters
     stopifnot(
@@ -141,7 +143,6 @@ get_bigquery_upload <- function(values, project = "toronto-shelter-project",
             Job ID: {job$jobReference$jobId}
             Job Creation Time: {job_time$creation_time}
             Job Start Time: {job_time$start_time}
-            ======================================================
             "
         )
     
@@ -179,16 +180,16 @@ upload_job <- get_bigquery_upload(
 #     get_bigquery_upload(
 #         table = "raw_shelter_2022"
 #     )
-# 
-# 
+ 
+ 
 # # * 2023 ----
-shelter_data_2023 <- get_shelter_data(slice = 1) %>%
-    filter(occupancy_date <= as.Date("2023-10-09"))
-
-shelter_data_2023 %>%
-    get_bigquery_upload(
-        table = "raw_shelter_2023"
-    )
+# shelter_data_2023 <- get_shelter_data(slice = 1) %>%
+#     filter(occupancy_date <= as.Date("2023-10-09"))
+# 
+# shelter_data_2023 %>%
+#     get_bigquery_upload(
+#         table = "raw_shelter_2023"
+#     )
 
 # *****************************************************************************
 # **** ----
