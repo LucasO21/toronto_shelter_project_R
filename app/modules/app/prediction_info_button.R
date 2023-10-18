@@ -30,7 +30,7 @@ prediction_info_button_Server <- function(id) {
           
           p("Change", code("Date"), ",", code("Location Info"), ",", code("Organization Info"), ",", "and"),
           p("and", code("Program Info"), "inputs as needed to filter for a particular day/location."),
-          p(tags$a(img(src = "well_inputs.png", width = "110%", height = "120%"))),
+          p(tags$a(img(src = "well_inputs.png", width = "100%", height = "120%"))),
           p("Hit", code("Apply"), "button to see changes in the table below. Hit", code("Reset"), "to reset entire table."),
           p(""),
           p(""),

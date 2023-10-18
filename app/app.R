@@ -41,18 +41,7 @@ ui <- tagList(
     tags$head(tags$style(HTML(".box {border-color: #ecf0f1 !important;}"))),
     tags$style(".custom-modal .modal-dialog {width: 100%;}"),
     tags$script(src="https://kit.fontawesome.com/77fcf700e6.js"),
-#     tags$style("
-#   .custom-value-box .small-box {
-#     background-color: white !important;
-#     border: 2px solid #2c3e50 !important;
-#   }
-# 
-#   .custom-value-box .small-box h3,
-#   .custom-value-box .small-box p {
-#     color: #2c3e50 !important;
-#   }
-# "),
-includeCSS("www/styles.css"),
+    includeCSS("www/styles.css"),
 
     
     
@@ -70,19 +59,24 @@ includeCSS("www/styles.css"),
             )
         ),
         
+      # * Preditions Tab ----
         tabPanel(
             title = "Predictions",
+            
+            # ** Header Fluid Row ----
             fluidRow(
                 column(
                     width = 10, offset = 1,
                     div(
                         class = "page-header",
                         h1("Predictions"),
-                        #actionButton("info", "Get Info", icon("info-circle"))
+                        h3("Overnight Room & Bed Shelter Occupancy - Next 5 Days"),
                         prediction_info_button_UI("pred_tab_info")
                     )
                 )
-            ),
+            ), # ---- End Header Fluid Row ---- #
+            
+            # ** Well Panel Fluid Row ----
             fluidRow(
                 column(
                     width = 10, offset = 1,
@@ -107,8 +101,6 @@ includeCSS("www/styles.css"),
                                             min     = NULL,
                                             max     = NULL
                                         )
-                                      
-                                        
                                     ),
                                     div(
                                         class = "col-md-2",
@@ -126,8 +118,6 @@ includeCSS("www/styles.css"),
                                                 `selected-text-format` = "count > 1"
                                             )
                                         )
-                                       
-                                    
                                     ),
                                     div(
                                         class = "col-md-2",
@@ -145,7 +135,6 @@ includeCSS("www/styles.css"),
                                                 `selected-text-format` = "count > 1"
                                             )
                                         )
-                                        #uiOutput("organization_id_picker_input")
                                     ),
                                     div(
                                         class = "col-md-3",
@@ -176,9 +165,9 @@ includeCSS("www/styles.css"),
                         )
                     )
                 )
-            ),
+            ), # ---- End Well Panel Fluid Row ---- #
             
-            # * Value Boxes Fluid Row ----
+            # ** Value Boxes Fluid Row ----
             fluidRow(
               column(
                 width = 10, offset = 1,
@@ -191,23 +180,9 @@ includeCSS("www/styles.css"),
                   column(width = 4, value_box_UI("pred_rate_room"))
                 )
               )
-            ),
+            ), # ---- End Value Box Fluid Row ---- #
             
-            fluidRow(
-              column(
-                width = 10, offset = 1,
-                column(
-                  width = 9
-                  # value_box_UI("pred_capacity_bed"),
-                  # value_box_UI("pred_occupied_bed"),
-                  # value_box_UI("pred_capacity_room"),
-                  # value_box_UI("pred_occupied_room")
-                )
-                #column(width = 6, value_box_UI("pred_occupied_bed"))
-              )
-             
-            ),
-            
+            # ** Datatable Fluid Row ----
             fluidRow(
                 column(
                     width = 10, offset = 1,
@@ -231,14 +206,14 @@ includeCSS("www/styles.css"),
                         )
                     )
                 )
-            )
-            #)
+            ) # ---- End Datatable Fluid Row ---- #
         ),
         
-        # Accuracy Tab
+        # * Accuracy Tab ----
         tabPanel(
             title = "Accuracy",
             
+            # ** Header Panel Fluid Row ----
             fluidRow(
                 column(
                     width = 10, offset = 1,
@@ -249,7 +224,7 @@ includeCSS("www/styles.css"),
                         actionButton("info", "Get Info", icon("info-circle"))
                     )
                 )
-            )
+            ) # ---- End Header Panel Fluid Row ---- #
             
         )
     )
@@ -267,7 +242,7 @@ includeCSS("www/styles.css"),
 # *****************************************************************************
 server <- function(input, output) {
     
-    # ** Info Button ----
+    # * Info Button ----
    observeEvent(input[["pred_tab_info-info"]], {
        prediction_info_button_Server("pred_tab_info")
    })
@@ -277,13 +252,17 @@ server <- function(input, output) {
         read_rds("artifacts/metadata_list.rds")
     })
     
+    # AccuWeather
     output$api_mtd <- renderText({
         mtd_list()[[1]]
     })
     
+    # Big Query
     output$bq_mtd <- renderText({
         mtd_list()[[2]]
     })
+    
+    # ---- End Info Button ---- #
     
     # * Load Prediction Data ----
     reporting_tbl <- reactive({
@@ -341,13 +320,6 @@ server <- function(input, output) {
         )
     })
     
-    # Placeholder (Module)
-    # picker_input_Server(
-    #     id   = "loc_info-picker",
-    #     data = reporting_tbl(),
-    #     col  = "loc_info" 
-    # )
-    
     # * Date Picker Update ----
     shiny::observe({
         updateDateRangeInput(
@@ -397,8 +369,6 @@ server <- function(input, output) {
     shinyjs::onclick(id = "toggle", {
         shinyjs::toggle(id = "inputs", anim = TRUE, animType = "slide")
     })
-    
-
     
     
     # * Prediction Datatable ----
@@ -478,22 +448,7 @@ server <- function(input, output) {
     
     })
     
-    # * Value Boxes
-    # output$pred_actual <- renderValueBox({
-    #   
-    #   valueBox(
-    #     predictions_filtered_tbl() %>% 
-    #           filter(capacity_type == "Bed") %>% 
-    #           pull(pred_capacity_actual) %>% 
-    #           sum() %>% 
-    #           scales::comma(), 
-    #         
-    #     "Pred Bed Capacity",
-    #     icon = icon("bed", lib = "font-awesome")
-    #     
-    #   )
-    # })
-    
+    # * Value Boxes ----
     value_box_Server(
       id        = "pred_capacity_bed",
       data      = predictions_filtered_tbl,
@@ -544,6 +499,11 @@ server <- function(input, output) {
  
 }
 
+
+# *****************************************************************************
+# **** ----
+# RUN APP ----
+# *****************************************************************************
 shinyApp(ui, server)
 
 
