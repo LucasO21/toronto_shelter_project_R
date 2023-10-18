@@ -33,9 +33,12 @@ value_box_Server <- function(id, data = reactive(NULL), value = reactive(NULL),
                 
                 v <- switch(
                     shiny::req(value()),
-                    "capacity_bed" = pull(value_tbl[1, ][2]),
-                    "occupied_bed" = pull(value_tbl[1, ][3]),
-                    "bed_rate"     = pull(value_tbl[1, ][3] / value_tbl[1, ][2]) %>% scales::percent()
+                    "capacity_bed"  = pull(value_tbl[1, ][2]),
+                    "occupied_bed"  = pull(value_tbl[1, ][3]),
+                    "bed_rate"      = pull(value_tbl[1, ][3] / value_tbl[1, ][2]) %>% scales::percent(),
+                    "capacity_room" = pull(value_tbl[2, ][2]),
+                    "occupied_room" = pull(value_tbl[2, ][3]),
+                    "room_rate"     = pull(value_tbl[2, ][3] / value_tbl[2, ][2]) %>% scales::percent()
                 )
                 
                 valueBox(

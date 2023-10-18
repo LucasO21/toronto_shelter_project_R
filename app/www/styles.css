@@ -9,6 +9,12 @@
   border-radius: 5px !important;
 }
 
+.dataTables_wrapper {
+  width: 100%;
+  overflow-x: auto;
+}
+
+
 /*
 .custom-value-box .small-box h3,
 .custom-value-box .small-box p {
@@ -16,3 +22,5 @@
   border: 2px solid #2c3e50 !important;
   border-radius: 5px !important;
 }
+
+
