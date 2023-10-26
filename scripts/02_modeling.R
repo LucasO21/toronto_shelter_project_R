@@ -42,106 +42,16 @@ dbListTables(con)
 # DATA IMPORT ----
 # *****************************************************************************
 
-# * 2022 Shelter Data ----
-data_2022_tbl <- dplyr::tbl(con, "feature_shelter_plus_weather_2022") %>% 
-    collect() %>% 
-    mutate(occupancy_date = lubridate::ymd(occupancy_date)) %>% 
-    mutate(location_address = str_trim(location_address, side = c("both"))) %>% 
-    mutate(location_city = str_trim(location_city, side = c("both")))
-
-data_2022_tbl %>% glimpse()
-
-min(data_2022_tbl$occupancy_date)
-max(data_2022_tbl$occupancy_date)
-
-data_2022_tbl %>% sapply(function(x) sum(is.na(x)))
-
-
-# * 2023 Shelter Data ----
-data_2023_tbl <- dplyr::tbl(con, "feature_shelter_plus_weather_2023") %>% 
+shelter_occupancy_tbl <- dplyr::tbl(con, "shelter_occupancy_weather_integration_2022_2023") %>% 
   collect() %>% 
   mutate(occupancy_date = lubridate::ymd(occupancy_date)) %>% 
   mutate(location_address = str_trim(location_address, side = c("both"))) %>% 
   mutate(location_city = str_trim(location_city, side = c("both")))
 
-data_2023_tbl %>% glimpse()
+shelter_occupancy_tbl %>% glimpse()
 
-min(data_2023_tbl$occupancy_date)
-max(data_2023_tbl$occupancy_date)
-
-data_2023_tbl %>% sapply(function(x) sum(is.na(x)))
-
-# get_features_data_from_bigquery <- function(year = 2023) {
-#   
-#   con <- get_bigquery_connection(dataset = "data_features")
-#   
-#   tables <- DBI::dbListTables(con)
-# 
-#   shelter_tbl <- dplyr::tbl(con, str_glue("feature_shelter_{year}")) %>% 
-#     collect() %>% 
-#     mutate(occupancy_date = lubridate::ymd(occupancy_date)) %>% 
-#     mutate(location_address = str_trim(location_address, side = c("both"))) %>% 
-#     mutate(location_city = str_trim(location_city, side = c("both")))
-#   
-#   weather_tbl <- dplyr::tbl(con, str_glue("feature_weather_{year}")) %>% 
-#     collect() %>% 
-#     mutate(date = lubridate::ymd(date))
-#   
-#   # message
-#   message(
-#     str_glue(
-#       "
-#       Shelter Data Info:
-#         nrow: {nrow(shelter_tbl)}
-#         nrow: {ncol(shelter_tbl)}
-#         min date: {min(shelter_tbl$occupancy_date)}
-#         max date: {max(shelter_tbl$occupancy_date)}
-#       "
-#     )
-#   )
-#   
-#   # return 
-#   return(list(shelter_tbl, weather_tbl))
-#   
-# }
-# 
-# features_raw_list <- get_features_data_from_bigquery(year = 2023)
-# 
-# 
-# get_features_data_prepped <- function(x) {
-#   
-#   shelter_dates <- unique(x[[1]]$occupancy_date)
-#   weather_dates <- unique(x[[2]]$date)
-#   diff_dates    <- shelter_dates[!shelter_dates %in% weather_dates]
-#   
-#   # diff dates
-#   weather_avg <- x[[2]] %>% 
-#     arrange(date) %>% 
-#     tail(6) %>% 
-#     bind_rows(
-#       tibble(
-#         stn  = "712650",
-#         date = c(diff_dates)
-#     )
-#   ) %>% 
-#     mutate(avg_min = slider::slide_dbl(temp_min, mean, .before = 5 - 1, .complete = TRUE)) %>% 
-#     mutate(avg_min = slider::slide_dbl(temp_min, mean, .before = 5 - 1, .complete = TRUE)) %>% 
-#   
-#   # return
-#   return(weather_avg)
-#   
-# }
-# 
-# get_features_data_prepped(x = features_raw_list)
-
-
-# *****************************************************************************
-# **** ----
-# COMBINE DATA ----
-# *****************************************************************************
-
-data_combined_tbl <- data_2022_tbl %>% 
-  bind_rows(data_2023_tbl)
+min(shelter_occupancy_tbl$occupancy_date)
+max(shelter_occupancy_tbl$occupancy_date)
 
 
 # *****************************************************************************
@@ -151,7 +61,7 @@ data_combined_tbl <- data_2022_tbl %>%
 
 # * Top Orgs by Location ----
 # - checking to see what organization has the highest number of distinct locations
-data_combined_tbl %>% 
+shelter_occupancy_tbl %>% 
   filter(occupancy_date >= as.Date("2022-10-01")) %>% 
     summarise(
         n   = n_distinct(location_id),
@@ -168,9 +78,11 @@ data_combined_tbl %>%
 # *****************************************************************************
 
 # * Filter for Org 1 ----
-analysis_cohort_tbl <- data_combined_tbl %>% 
+analysis_cohort_tbl <- shelter_occupancy_tbl %>% 
     filter(organization_id %in% c(1, 15, 6)) %>% 
-    filter(modeling_cohort == 1)
+    filter(model_cohort_adj == 1)
+
+analysis_cohort_tbl %>% sapply(function(x) sum(is.na(x)))
 
 # *****************************************************************************
 # **** ----
@@ -336,7 +248,7 @@ automl_output_list_reg[[1]]
 # *****************************************************************************
 
 # * Prob ----
-h2o.getModel("StackedEnsemble_AllModels_1_AutoML_3_20231018_185922") %>% 
+h2o.getModel("StackedEnsemble_AllModels_1_AutoML_1_20231026_60055") %>% 
   h2o.saveModel(path = "../artifacts/h2o_artifacts_v1/prob/")
 
 automl_output_list_prob %>% 
@@ -344,7 +256,7 @@ automl_output_list_prob %>%
 
 
 # * Reg ----
-h2o.getModel("StackedEnsemble_AllModels_1_AutoML_4_20231018_190214") %>% 
+h2o.getModel("StackedEnsemble_BestOfFamily_1_AutoML_2_20231026_61754") %>% 
   h2o.saveModel(path = "../artifacts/h2o_artifacts_v1/reg/")
 
 automl_output_list_reg %>% 
