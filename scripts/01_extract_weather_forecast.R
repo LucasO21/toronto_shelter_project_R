@@ -108,8 +108,8 @@ weather_forecast_tbl <- get_request_url() %>%
 get_bigquery_upload(
     values  = weather_forecast_tbl,
     project = "toronto-shelter-project",
-    dataset = "data_features",
-    table   = "feature_weather_forecast",
+    dataset = "data_clean",
+    table   = "weather_forecast_5_day",
     write_disposition = "WRITE_APPEND"
 )
 
