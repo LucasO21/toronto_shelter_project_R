@@ -154,8 +154,9 @@ get_bigquery_upload <- function(values,
 
 # * Upload to Big Query ---
 upload_job <- get_bigquery_upload(
-    values = shelter_raw_tbl,
-    table  = "raw_shelter_2023",
+    values            = shelter_raw_tbl,
+    dataset           = "data_raw",
+    table             = "raw_shelter_2023",
     write_disposition = "WRITE_TRUNCATE"
 )
 

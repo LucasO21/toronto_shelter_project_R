@@ -130,9 +130,15 @@ pred_features_combined_tbl <- get_prediction_features_combined(
     pred_features_data_list[[1]], 
     pred_features_data_list[[2]]
 ) %>% 
-    select(-pkey)
+    select(-pkey, -x_id) %>% 
+    select(
+        occupancy_date, organization_id, shelter_id, location_id, program_id,
+        sector_id, program_model_id, overnight_service_type_id, program_area_id, 
+        capacity_type_id, occupied, capacity_actual, occupancy_rate
+    ) %>% 
+    mutate(across(ends_with("_id"), ~ as.factor(.)))
 
-# pred_features_combined %>% glimpse()
+# pred_features_combined_tbl %>% glimpse()
 # 
 # pred_features_combined %>% sapply(function(x) sum(is.na(x)))
 
@@ -190,33 +196,25 @@ pred_data_processed_list <- get_prediction_recipes(pred_features_combined_tbl)
 
 get_predictions <- function(list) {
     
-    # LOAD MODELS
+    # LOAD MODELS / MAKE PREDICTIONs
     
     # * Prob Model
-    automl_leader_model_prob <- read_rds(
-        "../artifacts/h2o_models_v1/automl_list_prob.rds"
-    )[[1]]@leader
-    
-    # * Reg Model
-    automl_leader_model_reg <- read_rds(
-        "../artifacts/h2o_models_v1/automl_list_reg.rds"
-    )[[1]]@leader
-    
-    # MAKE PREDICTIONS 
-    
-    # * Prob
-    pred_tbl_prob <- automl_leader_model_prob %>% 
+    pred_tbl_prob <- h2o.loadModel(
+        "../artifacts/h2o_artifacts_v1/prob/StackedEnsemble_AllModels_1_AutoML_3_20231018_185922"
+    ) %>% 
         h2o.predict(newdata = list[[1]]) %>% 
         as_tibble() %>% 
         rename(pred_occupancy_rate = predict)
     
-    # * Reg
-    pred_tbl_reg <- automl_leader_model_reg %>% 
+    # * Reg Model
+    pred_tbl_reg <- h2o.loadModel(
+        "../artifacts/h2o_artifacts_v1/reg/StackedEnsemble_AllModels_1_AutoML_4_20231018_190214"
+    ) %>% 
         h2o.predict(newdata = list[[2]]) %>% 
         as_tibble() %>% 
         rename(pred_occupied = predict) %>% 
         mutate(pred_occupied = round(pred_occupied))
-    
+   
     # * Combine 
     ret <- bind_cols(pred_tbl_prob, pred_tbl_reg)
     
@@ -225,7 +223,7 @@ get_predictions <- function(list) {
     
 }
 
-pred_tbl <- get_predictions(pred_data_processed_list)
+predictions_tbl <- get_predictions(pred_data_processed_list)
 
 
 # *****************************************************************************
@@ -281,9 +279,9 @@ get_predictions_formatted <- function(raw_data, pred_data) {
     
 }
 
-pred_final_tbl <- get_predictions_formatted(
+predictions_final_tbl <- get_predictions_formatted(
     raw_data  = pred_features_data_list[[1]],
-    pred_data = pred_tbl
+    pred_data = predictions_tbl
 )
 
 
