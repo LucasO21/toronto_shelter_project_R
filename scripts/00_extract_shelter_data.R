@@ -89,6 +89,7 @@ get_shelter_data <- function(year = 2023) {
     
     # Filter Date > Max Date
     output <- df %>% filter(occupancy_date > max_date - 1)
+
     
     # Metadata
     mtd <- str_glue(
@@ -101,18 +102,21 @@ get_shelter_data <- function(year = 2023) {
     
     # Message
     message(mtd)
-    
+
     return(list(data = output, metadata = mtd))
+
 }
 
 shelter_raw_tbl <- get_shelter_data()
 
 
 # * Load to Big Query ----
-get_bigquery_upload <- function(values, project = "toronto-shelter-project", 
-                                dataset = "data_raw", table = NULL,
+get_bigquery_upload <- function(values, 
+                                project            = "toronto-shelter-project", 
+                                dataset            = "data_raw", 
+                                table              = NULL,
                                 create_disposition = "CREATE_IF_NEEDED",
-                                write_disposition = "WRITE_APPEND") {
+                                write_disposition  = "WRITE_APPEND") {
     
     # Validate parameters
     stopifnot(
@@ -151,7 +155,6 @@ get_bigquery_upload <- function(values, project = "toronto-shelter-project",
             Job ID: {job$jobReference$jobId}
             Job Creation Time: {job_time$creation_time}
             Job Start Time: {job_time$start_time}
-            ======================================================
             "
         )
     
@@ -161,10 +164,12 @@ get_bigquery_upload <- function(values, project = "toronto-shelter-project",
 }
 
 
+# * Upload to Big Query ---
 upload_job <- get_bigquery_upload(
     values = shelter_raw_tbl[[1]],
     table  = "raw_shelter_2023",
     write_disposition = "WRITE_APPEND"
+
 )
 
 
@@ -195,8 +200,8 @@ read_rds("../artifacts/metadata_list.rds")
 #     get_bigquery_upload(
 #         table = "raw_shelter_2022"
 #     )
-# 
-# 
+ 
+ 
 # # * 2023 ----
 # shelter_data_2023 <- get_shelter_data(slice = 1) %>%
 #     filter(occupancy_date <= as.Date("2023-10-09"))
@@ -260,5 +265,11 @@ read_rds("../artifacts/metadata_list.rds")
 dump(
     list   = c("get_shelter_data", "get_bigquery_upload", "get_bigquery_connection"),
     file   = "../functions/extract_shelter_data.R",
+    append = FALSE
+)
+
+dump(
+    list   = c("get_shelter_data", "get_bigquery_upload", "get_bigquery_connection"),
+    file   = "../app/modules/analysis/extract_shelter_data.R",
     append = FALSE
 )

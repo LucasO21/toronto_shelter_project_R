@@ -8,5 +8,6 @@
 /qmd/00_extract_raw_shelter_data_files
 *_files/
 *.html
+*.log
 .DS_Store
 /.quarto/

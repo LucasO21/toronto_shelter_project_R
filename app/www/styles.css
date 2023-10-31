@@ -1,0 +1,26 @@
+
+
+/* Value Boxes */
+.custom-value-box .small-box {
+  background-color: white !important;
+  color: #2c3e50 !important;
+  border: 2px solid #2c3e50 !important;
+  border: 2px solid #2c3e50 !important;
+  border-radius: 5px !important;
+}
+
+.dataTables_wrapper {
+  width: 100%;
+  overflow-x: auto;
+}
+
+
+/*
+.custom-value-box .small-box h3,
+.custom-value-box .small-box p {
+  color: #2c3e50 !important;
+  border: 2px solid #2c3e50 !important;
+  border-radius: 5px !important;
+}
+
+

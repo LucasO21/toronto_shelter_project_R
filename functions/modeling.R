@@ -1,37 +1,3 @@
-get_features_data_from_bigquery <-
-function(year = 2023) {
-  
-  con <- get_bigquery_connection(dataset = "data_features")
-  
-  tables <- DBI::dbListTables(con)
-  
-  shelter_tbl <- dplyr::tbl(con, str_glue("feature_shelter_plus_weather_{year}")) %>% 
-    collect() %>% 
-    mutate(occupancy_date = lubridate::ymd(occupancy_date)) %>% 
-    mutate(location_address = str_trim(location_address, side = c("both"))) %>% 
-    mutate(location_city = str_trim(location_city, side = c("both")))
-  
-  # weather_tbl <- dplyr::tbl(con, str_glue("feature_weather_{year}")) %>% 
-  #   collect() %>% 
-  #   mutate(date = lubridate::ymd(date))
-  
-  # message
-  message(
-    str_glue(
-      "
-      Shelter Data Info:
-        nrow: {nrow(shelter_tbl)}
-        ncol: {ncol(shelter_tbl)}
-        min date: {min(shelter_tbl$occupancy_date)}
-        max date: {max(shelter_tbl$occupancy_date)}
-      "
-    )
-  )
-  
-  # return 
-  return(shelter_tbl)
-  
-}
 get_automl_recipes <-
 function(data, prob = TRUE) {
   
@@ -42,11 +8,11 @@ function(data, prob = TRUE) {
   }
   
   recipe_spec <- formula %>% 
-    update_role(x_id, new_role = "indicator") %>% 
-    step_mutate(capacity_type = case_when(
-      str_detect(tolower(capacity_type), "bed") ~ "Bed",
-      TRUE                                      ~ "Room"
-    ) %>% as_factor) %>% 
+    # update_role(x_id, new_role = "indicator") %>% 
+    # step_mutate(capacity_type = case_when(
+    #   str_detect(tolower(capacity_type), "bed") ~ "Bed",
+    #   TRUE                                      ~ "Room"
+    # ) %>% as_factor) %>% 
     step_novel(all_nominal(), -all_outcomes()) %>% 
     step_zv(all_predictors()) %>% 
     step_timeseries_signature(occupancy_date) %>% 
@@ -62,7 +28,7 @@ function(data, prob = TRUE) {
   }
   
   # recipe_spec <- recipe_spec %>% prep()
-  
+    
   return(recipe_spec)
   
   
@@ -100,7 +66,7 @@ function(recipe, train_data, test_data, mrspm = 300,
     exclude_algos              = c("DeepLearning"),
     seed                       = seed
   )
-  
+
   return(
     list(
       h2o_automl_models = automl_models_h2o,
