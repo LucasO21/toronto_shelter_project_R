@@ -220,7 +220,7 @@ ui <- tagList(
                     rounded = TRUE,
                     h3("Map", tags$span(id = "pred_dt"), icon("info-circle")),
                     status = "info",
-                    leafletOutput("map")
+                    leafletOutput("map", height = "600px")
                   )
                 )
               )
