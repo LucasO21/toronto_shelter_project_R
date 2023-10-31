@@ -38,7 +38,11 @@ get_reporting_data_from_bq <- function() {
     
 }
 
-# reporting_tbl <- get_reporting_data_from_bq()
+reporting_tbl <- get_reporting_data_from_bq()
+
+reporting_tbl %>% glimpse()
+
+reporting_tbl %>% View()
 
 
 # *****************************************************************************

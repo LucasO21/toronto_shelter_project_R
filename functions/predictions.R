@@ -5,7 +5,7 @@ function(table_name) {
     con <- get_bigquery_connection(dataset = "data_features")
     
     # get shelter features
-    shelter_pred_tbl <- dplyr::tbl(con, "feature_pred_shelter") %>% 
+    shelter_forecast_features_tbl <- dplyr::tbl(con, "shelter_occupancy_forecast_features") %>% 
         collect() %>% 
         mutate(occupancy_date = lubridate::ymd(occupancy_date)) %>% 
         rename(
@@ -13,11 +13,11 @@ function(table_name) {
             occupied        = avg_occupied_l7d,
             occupancy_rate  = avg_occupancy_rate_l7d
         ) %>% 
-        mutate(x_id = row_number(), .before = occupancy_date) %>% 
+        #mutate(x_id = row_number(), .before = occupancy_date) %>% 
         mutate(occupancy_rate = ifelse(occupancy_rate == 100, "Yes", "No") %>% as.factor()) %>% 
         mutate_if(is_character, as_factor) %>% 
         filter(organization_id %in% c(1, 15, 6)) %>% 
-        mutate(across(c(organization_id, shelter_id, location_id, program_id), as.factor))
+        mutate(across(ends_with("_id"), as.factor))
     
     # get weather features
     weather_forecast_tbl <- dplyr::tbl(con, "feature_weather_forecast") %>% 
@@ -25,7 +25,7 @@ function(table_name) {
     
     # distinct shelter forecast dates
     weather_forecast_tbl_2 <- tibble(
-        date = unique(shelter_pred_tbl$occupancy_date)
+        date = unique(shelter_forecast_features_tbl$occupancy_date)
     ) %>% 
         arrange(date) %>% 
         left_join(
@@ -56,8 +56,8 @@ function(table_name) {
     # message
     message(str_glue(
         "shelter pred data info:
-            min date: {min(shelter_pred_tbl$occupancy_date)}
-            max date: {max(shelter_pred_tbl$occupancy_date)}
+            min date: {min(shelter_forecast_features_tbl$occupancy_date)}
+            max date: {max(shelter_forecast_features_tbl$occupancy_date)}
         
         weather forecast data info:
             min date: {min(weather_forecast_tbl_final$date)}
@@ -68,8 +68,8 @@ function(table_name) {
     # return
     return(
         list(
-            shelter_pred_tbl     = shelter_pred_tbl,
-            weather_forecast_tbl = weather_forecast_tbl_final
+            shelter_forecast_features_tbl = shelter_forecast_features_tbl,
+            weather_forecast_tbl          = weather_forecast_tbl_final
         )
     )
     
@@ -127,33 +127,25 @@ function(data) {
 get_predictions <-
 function(list) {
     
-    # LOAD MODELS
+    # LOAD MODELS / MAKE PREDICTIONs
     
     # * Prob Model
-    automl_leader_model_prob <- read_rds(
-        "../artifacts/h2o_models_v1/automl_list_prob.rds"
-    )[[1]]@leader
-    
-    # * Reg Model
-    automl_leader_model_reg <- read_rds(
-        "../artifacts/h2o_models_v1/automl_list_reg.rds"
-    )[[1]]@leader
-    
-    # MAKE PREDICTIONS 
-    
-    # * Prob
-    pred_tbl_prob <- automl_leader_model_prob %>% 
+    pred_tbl_prob <- h2o.loadModel(
+        "../artifacts/h2o_artifacts_v1/prob/StackedEnsemble_AllModels_1_AutoML_1_20231026_60055"
+    ) %>% 
         h2o.predict(newdata = list[[1]]) %>% 
         as_tibble() %>% 
         rename(pred_occupancy_rate = predict)
     
-    # * Reg
-    pred_tbl_reg <- automl_leader_model_reg %>% 
+    # * Reg Model
+    pred_tbl_reg <- h2o.loadModel(
+        "../artifacts/h2o_artifacts_v1/reg/StackedEnsemble_BestOfFamily_1_AutoML_2_20231026_61754"
+    ) %>% 
         h2o.predict(newdata = list[[2]]) %>% 
         as_tibble() %>% 
         rename(pred_occupied = predict) %>% 
         mutate(pred_occupied = round(pred_occupied))
-    
+   
     # * Combine 
     ret <- bind_cols(pred_tbl_prob, pred_tbl_reg)
     
@@ -191,13 +183,13 @@ function(raw_data, pred_data) {
             pred_fully_occupied != pred_fully_occupied_adj ~ "No Match",
             TRUE                                           ~ "Match"
         )) %>% 
-        mutate(pred_time = formatted_time_est) %>% 
-        select(
-            x_id, occupancy_date, pkey, starts_with("organization"),
-            starts_with("shelter"), starts_with("location"), 
-            program_id, program_name, starts_with("program"), sector, 
-            overnight_service_type, capacity_type, starts_with("pred"), everything()
-        ) 
+        mutate(pred_time = formatted_time_est)
+        # select(
+        #     x_id, occupancy_date, pkey, starts_with("organization"),
+        #     starts_with("shelter"), starts_with("location"), 
+        #     program_id, program_name, starts_with("program"), sector, 
+        #     overnight_service_type, capacity_type, starts_with("pred"), everything()
+        # ) 
     
     # Message
     message(str_glue(

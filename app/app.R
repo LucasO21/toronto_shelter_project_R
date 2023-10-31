@@ -22,10 +22,8 @@ library(shinyBS)
 library(htmlwidgets)
 
 # * Source ----
-
 source(file = "modules/analysis/reporting.R")
 source(file = "modules/analysis/extract_shelter_data.R")
-
 source(file = "modules/app/ui_server_modules.R")
 source(file = "modules/app/prediction_info_button.R")
 
@@ -196,7 +194,8 @@ ui <- tagList(
                             rounded = TRUE,
                             h3("Predictions", tags$span(id = "pred_dt"), icon("info-circle")),
                             status = "info",
-                            dataTableOutput("prediction_dt")
+                            #dataTableOutput("prediction_dt")
+                            DT::dataTableOutput("prediction_dt")
                         ),
                         bsPopover(
                             id = "pred_dt",
@@ -207,6 +206,7 @@ ui <- tagList(
                     )
                 )
             ) # ---- End Datatable Fluid Row ---- #
+            
         ),
         
         # * Accuracy Tab ----
@@ -267,7 +267,8 @@ server <- function(input, output) {
     # * Load Prediction Data ----
     reporting_tbl <- reactive({
        tbl <- get_reporting_data_from_bq() %>% 
-           select(-c(x_id, pkey)) %>% 
+         #reporting_tbl %>% 
+           select(-c(pkey)) %>% 
            mutate(loc_info = paste(location_id, ": ", location_name), .before = shelter_id) %>% 
            mutate(org_info = paste(organization_id, ": ", organization_name), .before = shelter_id) %>% 
            mutate(prog_info = paste(program_id, ": ", program_name), .before = shelter_id) %>% 
@@ -275,11 +276,12 @@ server <- function(input, output) {
                pred_occupancy_rate_adj <= 0.80 ~ "green",
                pred_occupancy_rate_adj <= 0.90 ~ "orange",
                TRUE                            ~ "red"
-           ))
+           )) 
        
        tbl
        
     })
+    
     
     # * Apply Button ----
     predictions_filtered_tbl <- eventReactive(input$apply, valueExpr = {
@@ -290,9 +292,10 @@ server <- function(input, output) {
             filter(loc_info %in% input$location_info) %>% 
             filter(org_info %in% input$organization_info) %>%
             filter(prog_info %in% input$program_info) %>%
-            select(occupancy_date, location_id, program_id, shelter_id, sector, overnight_service_type,
-                   capacity_type,pred_capacity_actual, pred_occupied_adj, 
-                   pred_available, pred_fully_occupied_adj, pred_occupancy_rate_adj, fmt) %>% 
+            select(occupancy_date, location_id, program_id, shelter_id, sector, 
+                   overnight_service_type, capacity_type,pred_capacity_actual, 
+                   pred_occupied_adj, pred_available, pred_fully_occupied_adj, 
+                   pred_occupancy_rate_adj, fmt) %>% 
             mutate(pred_occupancy_rate_adj = scales::percent(pred_occupancy_rate_adj, accuracy = 0.02)) %>% 
             mutate(capacity_type = case_when(
                 str_detect(capacity_type, "Bed") ~ "Bed",
@@ -372,22 +375,39 @@ server <- function(input, output) {
     
     
     # * Prediction Datatable ----
-    output$prediction_dt <- renderDataTable({
-        predictions_filtered_tbl() %>%
-            datatable(
-                options = list(
-                    columnDefs = list(
-                        list(className = "dt-center", targets = c(8:12)),
-                        list(visible = FALSE, targets = c(13))
-                    )
-                )
-            ) %>% 
-            formatStyle(
-                "pred_occupancy_rate_adj", "fmt", 
-                backgroundColor = styleEqual(
-                    c("green", "orange", "red"), c("#93c47d", "#ffe599", "#ea9999")
-                )
-            )
+    output$prediction_dt <- renderDT({
+        # predictions_filtered_tbl() %>%
+        #     DT::datatable(
+        #         options = list(
+        #             columnDefs = list(
+        #                 list(className = "dt-center", targets = c(8:12)),
+        #                 list(visible = FALSE, targets = c(13))
+        #             )
+        #         )
+        #     ) %>%
+        #     formatStyle(
+        #         "pred_occupancy_rate_adj", "fmt",
+        #         backgroundColor = styleEqual(
+        #             c("green", "orange", "red"), c("#93c47d", "#ffe599", "#ea9999")
+        #         )
+        #     )
+      predictions_filtered_tbl() %>% 
+        setNames(names(.) %>% str_remove_all("_adj")) %>% 
+        datatable(
+          options = list(
+            columnDefs = list(
+                  list(className = "dt-center", targets = c(8:12)),
+                  list(visible = FALSE, targets = c(13))
+              )
+          )
+        ) %>% 
+        formatStyle(
+                  "pred_occupancy_rate", "fmt",
+                  backgroundColor = styleEqual(
+                      c("green", "orange", "red"), c("#93c47d", "#ffe599", "#ea9999")
+                  )
+              )
+    
     })
 
     
