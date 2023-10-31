@@ -157,7 +157,7 @@ ui <- tagList(
                                 div(
                                     actionButton("apply", "Apply", icon = icon("play"), width = "140px"),
                                     actionButton("reset", "Reset", icon = icon("sync"), width = "140px"),
-                                    actionButton("download", "Download Data", icon = icon("download"), width = "140px"),
+                                    downloadButton("download_data", "Download Data", icon = icon("download"), width = "140px"),
                                     actionButton("mtd", "Metadata", icon = icon("info-circle"), width = "140px")
                                     
                                 )
@@ -497,6 +497,25 @@ server <- function(input, output) {
           group = ~location_name_list
         )
     })
+    
+    # * Download Data ----
+    output$download_data <- downloadHandler(
+      filename = function() {
+        paste("prediction", Sys.Date(), "csv", sep = ".")
+      },
+      
+      content = function(file) {
+        # Call the reactive 'predictions_filtered_tbl()' to get the current dataframe
+        data_to_download <- predictions_filtered_tbl() %>%
+          select(-c(long, lat, count_of_programs, mean_occupancy_rate,
+                    location_name, location_city, location_postal_code,
+                    location_province, location_address)) %>%
+          setNames(names(.) %>% str_remove_all("_adj"))
+        
+        # Use write.csv to write the data to the specified file
+        write.csv(data_to_download, file, row.names = FALSE)
+      }
+    )
 
     
     # * Reset Button ----
