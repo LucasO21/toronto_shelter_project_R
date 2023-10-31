@@ -1,7 +1,18 @@
 get_shelter_data <-
 function(year = 2023) {
+    
+    # Big Query Connection
+    con <- get_bigquery_connection(dataset = "data_raw")
+    
+    # Get Last Date in Big Query 
+    max_date <- DBI::dbGetQuery(
+        con,
+        "select max(occupancy_date) from `toronto-shelter-project.data_raw.raw_shelter_2023`"
+    )
+    
+    max_date <- max_date %>% pull() %>% as.Date()
 
-    # info
+    # Info (Open Data API)
     info <- show_package("21c83b32-d5a8-4106-a54f-010dbe49f6f2") %>% 
         list_package_resources() %>% 
         filter(str_to_lower(format) %in% c("csv", "geojson")) %>% 
@@ -20,39 +31,40 @@ function(year = 2023) {
             head(1)
     }
         
-    # info check
+    # Info Check
     if (is.null(info) || length(info) == 0) {
         stop("No API info extracted! Check API info code chunk", call. = FALSE)
     }
     
-    # data
+    # Data Extract (Open Data API)
     df <- info %>% 
         get_resource() %>% 
         janitor::clean_names() %>% 
         mutate(occupancy_date = lubridate::ymd(occupancy_date))
     
+    # Data Check
     if (is.null(df) || length(df) == 0) {
         stop("No data extracted! Check data chunk", call. = FALSE)
     }
     
-    # max date
-    # max_date <- max(df$occupancy_date)
-    # 
-    # # filter
-    # ret <- df %>% filter(occupancy_date > max_date - 1)
+    # Filter Date > Max Date
+    output <- df %>% filter(occupancy_date > max_date - 1)
+
     
     # Metadata
     mtd <- str_glue(
         "Metadata (Open Data Toronto API):
-            Rows: {nrow(df)}
-            Cols: {ncol(df)}
-            Date: {min(df$occupancy_date)} - {max(df$occupancy_date)}"
+            Rows: {nrow(output)}
+            Cols: {ncol(output)}
+            Max Date in Big Query: {max_date}
+            New Data Date Range: {min(output$occupancy_date)} - {max(output$occupancy_date)}"
     )
     
     # Message
     message(mtd)
-    
-    return(list(data = df, metadata = mtd))
+
+    return(list(data = output, metadata = mtd))
+
 }
 get_bigquery_upload <-
 function(values, 

@@ -1,7 +1,9 @@
 ---
 title: "Data Extraction 1 - Raw Shelter Data"
 date: "`r lubridate::now(tzone = 'EST')` EST"
-format: html
+format: 
+    html:
+        output-location: "output-folder/"
 theme: flatly
 toc: true
 toc-depth: 3
@@ -11,6 +13,9 @@ number-depth: 2
 
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(warning = FALSE, message = FALSE) 
+
+# Working Dir
+setwd(here::here("qmd"))
 
 # Libraries
 library(tidyverse)
@@ -24,7 +29,11 @@ source(file = "../functions/extract_shelter_data.R")
 
 # Introduction
 
-This notebook uses the [opendatatoronto](https://github.com/sharlagelfand/opendatatoronto) R package to extract daily data on shelter occupancy and overnight service occupancy for the city of Toronto. The package pulls data from [Toronto open data](https://open.toronto.ca/dataset/daily-shelter-overnight-service-occupancy-capacity/) which provides an API to access shelter occupancy data.
+This notebook uses the [Toronto Opendata](https://github.com/sharlagelfand/opendatatoronto) 
+R package to extract daily data on shelter occupancy and overnight service occupancy 
+for the city of Toronto. The package pulls data from 
+[Toronto Opendata](https://open.toronto.ca/dataset/daily-shelter-overnight-service-occupancy-capacity/) 
+which provides an API to access shelter occupancy data.
 
 Next the data is loaded to a [BigQuery](https://cloud.google.com/bigquery) project for further transformation using [DBT](https://docs.getdbt.com/)
 
@@ -77,10 +86,10 @@ Get latest 2023 data.
 
 ```{r extract_shelter_data_2023}
 
-# 2022 daily data
-daily_shelter_2023_tbl <- get_shelter_data(slice = 1)
+# 2023 daily data
+shelter_raw_tbl <- get_shelter_data()
 
-daily_shelter_2023_tbl %>% glimpse()
+shelter_raw_tbl %>% glimpse()
 ```
 
 
@@ -133,13 +142,11 @@ Upload 2023 data. Again this is a one time upload.
 ```{r, upload_shelter_data_2023, message=TRUE}
 
 # 2022 data (one time upload)
-get_bigquery_upload(
-    values  = daily_shelter_2023_tbl,
-    project = "toronto-shelter-project",
-    dataset = "data_raw",
-    table   = "raw_shelter_2023",
+upload_job <- get_bigquery_upload(
+    values = shelter_raw_tbl[[1]],
+    table  = "raw_shelter_2023",
     write_disposition = "WRITE_APPEND"
-    
+
 )
 
 ```

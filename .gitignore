@@ -11,3 +11,4 @@
 *.log
 .DS_Store
 /.quarto/
+/output_folder

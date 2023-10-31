@@ -6,7 +6,8 @@ function() {
         get_bigquery_connection(dataset = "data_pred"),
         "data_predictions"
     ) %>% 
-        collect()
+        collect() %>% 
+        distinct()
     
     return(reporting_tbl)
     
