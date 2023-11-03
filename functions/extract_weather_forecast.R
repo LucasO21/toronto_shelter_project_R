@@ -49,11 +49,12 @@ function(response, output = "data") {
     json <- fromJSON(content, flatten = TRUE)
     
     # Select output
-    switch(output,
-           data = json$DailyForecasts,
-           json = json,
-           content = content,
-           stop("Invalid output type.", call. = FALSE)
+    switch(
+        output,
+        data    = json$DailyForecasts,
+        json    = json,
+        content = content,
+        stop("Invalid output type.", call. = FALSE)
     )
 }
 get_data <-
@@ -68,5 +69,18 @@ function(data) {
         mutate(temp_avg = (temp_min + temp_max) / 2) %>% 
         mutate(date = as.Date(lubridate::ymd_hms(date)))
     
-    return(ret)
+    # Metadata
+    mtd <- str_glue(
+        "Metadata (AccuWeather API Data Extract):
+            Last Raw Data Extract Date: {Sys.Date()}
+            Date Range for New Data Extact: {min(ret$date)} - {max(ret$date)}
+            New Data Rows: {nrow(ret)}
+            New Data Cols: {ncol(ret)}
+        "
+    )
+    
+    return(list(
+        weather_forecast = ret,
+        metadata         = mtd
+    ))
 }

@@ -264,19 +264,27 @@ server <- function(input, output) {
    })
     
     # Metadata
-    mtd_list <- reactive({
-        read_rds("artifacts/metadata_list.rds")
+    shelter_data_mdt_list <- reactive({
+        read_rds("artifacts/shelter_metadata_list.rds")
     })
     
-    # AccuWeather
-    output$api_mtd <- renderText({
-        mtd_list()[[1]]
+    weather_data_mdt_list <- reactive({
+      read_rds("artifacts/weather_metadata_list.rds")
     })
     
-    # Big Query
-    output$bq_mtd <- renderText({
-        mtd_list()[[2]]
-    })
+    # * Shelter Data Extract Text
+    output$shelter_api_mtd <- renderText({shelter_data_mdt_list()[[1]]})
+    
+    # * Shelter Data BQ Upload Text
+    output$shelter_bq_mtd <- renderText({shelter_data_mdt_list()[[2]]})
+    
+    # * Shelter Data Extract Text
+    output$weather_api_mtd <- renderText({weather_data_mdt_list()[[1]]})
+    
+    # * Shelter Data BQ Upload Text
+    output$weather_bq_mtd <- renderText({weather_data_mdt_list()[[2]]})
+    
+    
     
     # ---- End Info Button ---- #
     
@@ -567,8 +575,12 @@ server <- function(input, output) {
     observeEvent(input$mtd, {
         showModal(
             modalDialog(
-                textOutput("api_mtd"), 
-                textOutput("bq_mtd"),
+              h3("View Metadata for Data Extraction and Upload Jobs"),
+              hr(),
+                verbatimTextOutput("shelter_api_mtd"), 
+                verbatimTextOutput("shelter_bq_mtd"),
+                verbatimTextOutput("weather_api_mtd"),
+                verbatimTextOutput("weather_bq_mtd"),
                 size = "l", easyClose = TRUE, fade = TRUE,
                 footer = modalButton("Close (Esc)")
             )

@@ -94,10 +94,12 @@ get_shelter_data <- function(year = 2023) {
     # Metadata
     mtd <- str_glue(
         "Metadata (Open Data Toronto API):
-            Rows: {nrow(output)}
-            Cols: {ncol(output)}
+            Last Raw Data Extract Date: {Sys.Date()}
+            Date Range for New Data Extact: {min(output$occupancy_date)} - {max(output$occupancy_date)}
             Max Date in Big Query: {max_date}
-            New Data Date Range: {min(output$occupancy_date)} - {max(output$occupancy_date)}"
+            New Data Rows: {nrow(output)}
+            New Data Cols: {ncol(output)}
+        "
     )
     
     # Message
@@ -116,7 +118,8 @@ get_bigquery_upload <- function(values,
                                 dataset            = "data_raw", 
                                 table              = NULL,
                                 create_disposition = "CREATE_IF_NEEDED",
-                                write_disposition  = "WRITE_APPEND") {
+                                write_disposition  = "WRITE_APPEND",
+                                upload_job         = "shelter") {
     
     # Validate parameters
     stopifnot(
@@ -148,13 +151,21 @@ get_bigquery_upload <- function(values,
         mutate(start_time = format(
             as.POSIXct(start_time / 1000, origin = "1970-01-01"), "%Y-%m-%d %I:%M %p"
         ))
+    
+    # Metadata
+    if (upload_job == "shelter") {
+        mtd_title = "Metadata (Shelter Occupancy Data Upload):"
+    } else if (upload_job == "weather") {
+        mtd_title = "Metadata (AccuWeather Forecast Data Upload):"
+    }
 
     mtd <- stringr::str_glue(
             "
-            Job Status: {job$status}
-            Job ID: {job$jobReference$jobId}
-            Job Creation Time: {job_time$creation_time}
-            Job Start Time: {job_time$start_time}
+            {mtd_title}
+                Job Status: {job$status}
+                Job ID: {job$jobReference$jobId}
+                Job Creation Time: {job_time$creation_time}
+                Job Start Time: {job_time$start_time}
             "
         )
     
@@ -179,14 +190,14 @@ upload_job <- get_bigquery_upload(
 # COLLECT METADATA ----
 # *****************************************************************************
 
-list(
-    shelter_extract_mtd = shelter_raw_tbl[[2]],
-    shelter_upload_mtd  = upload_job
-) %>% 
-    write_rds("../artifacts/metadata_list.rds")
-
-
-read_rds("../artifacts/metadata_list.rds")
+# list(
+#     shelter_extract_mtd = shelter_raw_tbl[[2]],
+#     shelter_upload_mtd  = upload_job
+# ) %>% 
+#     write_rds("../artifacts/metadata_list.rds")
+# 
+# 
+# read_rds("../artifacts/metadata_list.rds")
 
 # *****************************************************************************
 # **** ----
