@@ -312,3 +312,7 @@ dump(
     file = "../functions/predictions.R",
     append = FALSE
 )
+
+h2o.loadModel(
+    "../artifacts/h2o_artifacts_v1/reg/StackedEnsemble_BestOfFamily_1_AutoML_2_20231026_61754"
+)

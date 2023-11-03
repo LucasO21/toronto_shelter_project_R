@@ -296,7 +296,8 @@ server <- function(input, output) {
                pred_occupancy_rate_adj <= 0.80 ~ "green",
                pred_occupancy_rate_adj <= 0.90 ~ "orange",
                TRUE                            ~ "red"
-           ))
+           )) %>% 
+         filter(occupancy_date >= Sys.Date())
        
        tbl_2 <- tbl %>% 
          left_join(
