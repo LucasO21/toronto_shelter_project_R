@@ -6,7 +6,7 @@
 # *****************************************************************************
 
 # * Set Working Dir ----
-setwd(here::here("scripts"))
+setwd(here::here("scripts_dev"))
 
 # * Libraries ----
 library(tidyverse)
@@ -14,6 +14,9 @@ library(janitor)
 library(httr)
 library(jsonlite)
 library(bigrquery)
+
+# * Source ----
+source(file = "../functions/extract_shelter_data.R")
 
 
 # *****************************************************************************
@@ -96,23 +99,49 @@ get_data <- function(data) {
         mutate(temp_avg = (temp_min + temp_max) / 2) %>% 
         mutate(date = as.Date(lubridate::ymd_hms(date)))
     
-    return(ret)
+    # Metadata
+    mtd <- str_glue(
+        "Metadata (AccuWeather Forecast Data Extract):
+            Last Raw Data Extract Date: {Sys.Date()}
+            Date Range for New Data Extact: {min(ret$date)} - {max(ret$date)}
+            New Data Rows: {nrow(ret)}
+            New Data Cols: {ncol(ret)}
+        "
+    )
+    
+    return(list(
+        weather_forecast = ret,
+        metadata         = mtd
+    ))
 }
 
-weather_forecast_tbl <- get_request_url() %>% 
+weather_forecast_list <- get_request_url() %>% 
     get_request() %>% 
     get_data()
 
+weather_forecast_tbl <- weather_forecast_list[[1]]
+
+
 
 # * Upload to Big Query ----
-get_bigquery_upload(
-    values  = weather_forecast_tbl,
-    project = "toronto-shelter-project",
-    dataset = "data_clean",
-    table   = "weather_forecast_5_day",
+weather_forecast_bq_upload <- get_bigquery_upload(
+    upload_job = "weather",
+    values     = weather_forecast_tbl,
+    project    = "toronto-shelter-project",
+    dataset    = "data_clean",
+    table      = "weather_forecast_5_day",
     write_disposition = "WRITE_APPEND"
 )
 
+# *****************************************************************************
+# **** ----
+# COLLECT METADATA ----
+# *****************************************************************************
+
+list(
+    weather_extract_mtd = weather_forecast_list[[2]],
+    weather_upload_mtd  = weather_forecast_bq_upload
+) 
 
 # *****************************************************************************
 # **** ----
