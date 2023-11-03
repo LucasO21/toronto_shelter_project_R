@@ -6,7 +6,7 @@
 # *****************************************************************************
 
 # * Set Working Dir ----
-setwd(here::here("prod_scripts"))
+setwd(here::here("scripts_prod"))
 
 # * Libraries ----
 library(tidyverse)
