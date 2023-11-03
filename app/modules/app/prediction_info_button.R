@@ -26,11 +26,11 @@ prediction_info_button_Server <- function(id) {
           p("based on multiple features like location id, program id, weather, etc"),
           
           p("Use the", code("toggle"),  "button to toggle user inputs"),
-          p(tags$a(img(src = "toggle_button.png", width = "60%", height = "60%"))),
+          p(tags$a(img(src = "toggle_button.png", width = "20%", height = "20%"))),
           
           p("Change", code("Date"), ",", code("Location Info"), ",", code("Organization Info"), ",", "and"),
           p("and", code("Program Info"), "inputs as needed to filter for a particular day/location."),
-          p(tags$a(img(src = "well_inputs.png", width = "100%", height = "120%"))),
+          p(tags$a(img(src = "well_inputs.png", width = "100%", height = "150%"))),
           p("Hit", code("Apply"), "button to see changes in the table below. Hit", code("Reset"), "to reset entire table."),
           p(""),
           p(""),

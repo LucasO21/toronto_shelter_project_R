@@ -20,6 +20,8 @@ library(shinythemes)
 library(bslib)
 library(shinyBS)
 library(htmlwidgets)
+library(leaflet)
+library(tidygeocoder)
 
 # * Source ----
 source(file = "modules/analysis/reporting.R")
@@ -155,7 +157,7 @@ ui <- tagList(
                                 div(
                                     actionButton("apply", "Apply", icon = icon("play"), width = "140px"),
                                     actionButton("reset", "Reset", icon = icon("sync"), width = "140px"),
-                                    actionButton("download", "Download Data", icon = icon("download"), width = "140px"),
+                                    downloadButton("download_data", "Download Data", icon = icon("download"), width = "140px"),
                                     actionButton("mtd", "Metadata", icon = icon("info-circle"), width = "140px")
                                     
                                 )
@@ -199,13 +201,30 @@ ui <- tagList(
                         ),
                         bsPopover(
                             id = "pred_dt",
-                            title = "Predictions",
+                            title = "Predictions Table",
                             content = "Shelter overninght occupancy for the next 5 days",
                             placement = "left"
                         )
                     )
                 )
-            ) # ---- End Datatable Fluid Row ---- #
+            ), # ---- End Datatable Fluid Row ---- #
+            
+            # ** Map Fluid Row ----
+            fluidRow(
+              column(
+                width = 10, offset = 1,
+                div(
+                  box(
+                    width = 12,
+                    solidHeader = TRUE,
+                    rounded = TRUE,
+                    h3("Map", tags$span(id = "pred_dt"), icon("info-circle")),
+                    status = "info",
+                    leafletOutput("map", height = "600px")
+                  )
+                )
+              )
+            )
             
         ),
         
@@ -263,6 +282,10 @@ server <- function(input, output) {
     
     # * Load Prediction Data ----
     reporting_tbl <- reactive({
+      
+      # Load Geocode Long & Lat Data
+      geocode_tbl <- read_rds("modules/data/geocode.rds")
+      
        tbl <- get_reporting_data_from_bq() %>% 
          #reporting_tbl %>% 
            select(-c(pkey)) %>% 
@@ -273,12 +296,25 @@ server <- function(input, output) {
                pred_occupancy_rate_adj <= 0.80 ~ "green",
                pred_occupancy_rate_adj <= 0.90 ~ "orange",
                TRUE                            ~ "red"
-           )) 
+           )) %>% 
+         filter(occupancy_date >= Sys.Date())
        
-       tbl
+       tbl_2 <- tbl %>% 
+         left_join(
+           tbl %>% 
+             summarise(
+               count_of_programs   = n_distinct(program_id),
+               mean_occupancy_rate = mean(pred_occupancy_rate_adj),
+               .by = location_id
+             ) 
+         ) %>% 
+         left_join(geocode_tbl)
        
     })
     
+    output$test <- DT::renderDT({
+      reporting_tbl()
+    })
     
     # * Apply Button ----
     predictions_filtered_tbl <- eventReactive(input$apply, valueExpr = {
@@ -292,7 +328,9 @@ server <- function(input, output) {
             select(occupancy_date, location_id, program_id, shelter_id, sector, 
                    overnight_service_type, capacity_type,pred_capacity_actual, 
                    pred_occupied_adj, pred_available, pred_fully_occupied_adj, 
-                   pred_occupancy_rate_adj, fmt) %>% 
+                   pred_occupancy_rate_adj, fmt, count_of_programs, mean_occupancy_rate,
+                   lat, long, location_name, location_address, location_city, location_postal_code,
+                   location_province) %>% 
             mutate(pred_occupancy_rate_adj = scales::percent(pred_occupancy_rate_adj, accuracy = 0.02)) %>% 
             mutate(capacity_type = case_when(
                 str_detect(capacity_type, "Bed") ~ "Bed",
@@ -389,6 +427,9 @@ server <- function(input, output) {
         #         )
         #     )
       predictions_filtered_tbl() %>% 
+        select(-c(long, lat, count_of_programs, mean_occupancy_rate,
+                  location_name, location_city, location_postal_code,
+                  location_province, location_address)) %>% 
         setNames(names(.) %>% str_remove_all("_adj")) %>% 
         datatable(
           options = list(
@@ -406,6 +447,76 @@ server <- function(input, output) {
               )
     
     })
+    
+    # * Map ----
+    
+
+    
+    output$map <- renderLeaflet({
+      
+      # ** Location Name ----
+      location_name_list <- predictions_filtered_tbl()$location_name
+      
+      # * Color ----
+      get_color <- function(data) {
+        sapply(data$mean_occupancy_rate, function(mean_occupancy_rate) {
+          if (mean_occupancy_rate >= 0.9) {
+            "red"
+          } else if (mean_occupancy_rate < 0.9 & mean_occupancy_rate >= 0.8) {
+            "orange"
+          } else {
+            "green"
+          }
+        })
+      }
+      
+      # ** Icons ----
+      icons <- awesomeIcons(
+        icon        = "ios-close",
+        iconColor   = "black",
+        library     = "ion",
+        markerColor = get_color(data = predictions_filtered_tbl())
+      )
+      
+      
+      predictions_filtered_tbl() %>% 
+        mutate(mean_occupancy_rate = scales::percent(mean_occupancy_rate, accuracy = 0.02)) %>% 
+        mutate(popup = paste(
+          "Location Name: ", location_name, "<br>",
+          "Location ID: ", location_id, "<br>",
+          "Location Address: ", location_address, "<br>",
+          "Number of Available Programs: ", count_of_programs, "<br>",
+          "Mean Occupancy Rate: ", mean_occupancy_rate, "<br>"
+        )) %>%
+        leaflet() %>% 
+        addTiles() %>% 
+        addAwesomeMarkers(
+          lng   = ~long,
+          lat   = ~lat,
+          icon  = icons,
+          popup = ~popup,
+          group = ~location_name_list
+        )
+    })
+    
+    # * Download Data ----
+    output$download_data <- downloadHandler(
+      filename = function() {
+        paste("prediction", Sys.Date(), "csv", sep = ".")
+      },
+      
+      content = function(file) {
+        # Call the reactive 'predictions_filtered_tbl()' to get the current dataframe
+        data_to_download <- predictions_filtered_tbl() %>%
+          select(-c(long, lat, count_of_programs, mean_occupancy_rate,
+                    location_name, location_city, location_postal_code,
+                    location_province, location_address)) %>%
+          setNames(names(.) %>% str_remove_all("_adj"))
+        
+        # Use write.csv to write the data to the specified file
+        write.csv(data_to_download, file, row.names = FALSE)
+      }
+    )
 
     
     # * Reset Button ----
