@@ -26,9 +26,11 @@ This repo contains the R project for modeling overnight service occupancy in hom
 
 - ## Repository Structure
 
-- `/scripts`: Contains scripts for analysis.
+- `/scripts_dev`: Contains development scripts for analysis.
+- `/scripts_prod`; Contains production scripts that run on schedule.
 - `/functions`: Contains functions to modularize code.
-- `/qmd`: Contains Quarto documents
+- `/app`: Contains scripts for shiny app. 
+
   
 
 ## Resources
