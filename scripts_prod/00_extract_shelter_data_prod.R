@@ -6,7 +6,7 @@
 # *****************************************************************************
 
 # * Set Working Dir ----
-setwd(here::here("scripts_prod"))
+setwd("~/Desktop/School/2023_projects/toronto_shelter_project/scripts_prod")
 
 # * Libraries ----
 library(tidyverse)
@@ -14,6 +14,7 @@ library(janitor)
 library(lubridate)
 library(opendatatoronto)
 library(bigrquery)
+
 
 # * Source ----
 source("../functions/extract_shelter_data.R")
