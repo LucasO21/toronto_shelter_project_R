@@ -16,6 +16,9 @@ library(opendatatoronto)
 library(bigrquery)
 library(httr)
 library(jsonlite)
+library(h2o)
+library(tidymodels)
+library(timetk)
 
 # * Source ----
 source("../functions/extract_shelter_data.R")
