@@ -20,8 +20,13 @@ function(table_name) {
         mutate(across(ends_with("_id"), as.factor))
     
     # get weather features
-    weather_forecast_tbl <- dplyr::tbl(con, "feature_weather_forecast") %>% 
-        collect()
+    weather_forecast_tbl <- dplyr::tbl(
+        get_bigquery_connection(dataset = "data_clean"), 
+        "weather_forecast_5_day"
+    ) %>% 
+        collect() %>% 
+        filter(date >= Sys.Date()) %>% 
+        distinct()
     
     # distinct shelter forecast dates
     weather_forecast_tbl_2 <- tibble(
