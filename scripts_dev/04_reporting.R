@@ -22,6 +22,7 @@ library(tidygeocoder)
 # * Source ----
 source(file = "../functions/extract_shelter_data.R")
 
+
 # *****************************************************************************
 # **** ----
 # IMPORT PREDICTIONS ----

@@ -1,3 +1,7 @@
+
+# library(bigrquery)
+# bq_auth(path = "../../toronto-shelter-project-11204c698551.json")
+
 get_shelter_data <-
 function(year = 2023) {
     

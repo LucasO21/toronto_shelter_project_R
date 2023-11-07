@@ -5,8 +5,6 @@
 # SETUP ----
 # *****************************************************************************
 
-# * Set Working Dir ----
-
 # * Libraries ----
 library(tidyverse)
 library(janitor)
@@ -22,12 +20,17 @@ library(shinyBS)
 library(htmlwidgets)
 library(leaflet)
 library(tidygeocoder)
+library(bigrquery)
+
+# * Auth ----
+bq_auth(path = "toronto-shelter-project-11204c698551.json")
 
 # * Source ----
 source(file = "modules/analysis/reporting.R")
 source(file = "modules/analysis/extract_shelter_data.R")
 source(file = "modules/app/ui_server_modules.R")
 source(file = "modules/app/prediction_info_button.R")
+
 
 # *****************************************************************************
 # **** ----
@@ -218,7 +221,7 @@ ui <- tagList(
                     width = 12,
                     solidHeader = TRUE,
                     rounded = TRUE,
-                    h3("Map", tags$span(id = "pred_dt"), icon("info-circle")),
+                    h3("Map", tags$span(id = "pred_map"), icon("info-circle")),
                     status = "info",
                     leafletOutput("map", height = "600px")
                   )

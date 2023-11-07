@@ -13,3 +13,4 @@
 /.quarto/
 /output_folder
 /qmd
+*.json
