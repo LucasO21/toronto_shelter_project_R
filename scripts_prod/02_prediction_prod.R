@@ -41,7 +41,8 @@ pred_features_combined_tbl <- get_prediction_features_combined(
     pred_features_data_list[[2]]
 ) %>% 
     select(
-        occupancy_date, ends_with("_id"), occupied, capacity_actual, occupancy_rate
+        occupancy_date, ends_with("_id"), occupied, capacity_actual, occupancy_rate,
+        starts_with("temp")
     ) %>% 
     mutate(across(ends_with("_id"), ~ as.factor(.)))
 
@@ -70,6 +71,6 @@ get_bigquery_upload(
     values  = predictions_final_tbl,
     project = "toronto-shelter-project",
     dataset = "data_pred",
-    table   = "data_predictions",
+    table   = "shelter_occupancy_predictions",
     write_disposition = "WRITE_APPEND"
 )

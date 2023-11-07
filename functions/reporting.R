@@ -4,7 +4,7 @@ function() {
     # Prediction Data
     reporting_tbl <- dplyr::tbl(
         get_bigquery_connection(dataset = "data_pred"),
-        "data_predictions"
+        "shelter_occupancy_predictions"
     ) %>% 
         collect() %>% 
         distinct()
