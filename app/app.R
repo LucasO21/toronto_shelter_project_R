@@ -5,8 +5,6 @@
 # SETUP ----
 # *****************************************************************************
 
-# * Set Working Dir ----
-
 # * Libraries ----
 library(tidyverse)
 library(janitor)
@@ -24,17 +22,15 @@ library(leaflet)
 library(tidygeocoder)
 library(bigrquery)
 
+# * Auth ----
+bq_auth(path = "toronto-shelter-project-11204c698551.json")
+
 # * Source ----
 source(file = "modules/analysis/reporting.R")
 source(file = "modules/analysis/extract_shelter_data.R")
 source(file = "modules/app/ui_server_modules.R")
 source(file = "modules/app/prediction_info_button.R")
 
-# * Auth ----
-# set_service_token("toronto-shelter-project-064ce917a6a1.json")
-bq_auth(
-  path = "toronto-shelter-project-064ce917a6a1.json"
-)
 
 # *****************************************************************************
 # **** ----
