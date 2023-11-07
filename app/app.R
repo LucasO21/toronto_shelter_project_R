@@ -44,6 +44,7 @@ ui <- tagList(
     tags$head(tags$style(HTML(".box {border-color: #ecf0f1 !important;}"))),
     tags$style(".custom-modal .modal-dialog {width: 100%;}"),
     tags$script(src="https://kit.fontawesome.com/77fcf700e6.js"),
+    tags$style(HTML(".modal-lg {width: 60%; max-width: none;}")),
     includeCSS("www/styles.css"),
 
     
