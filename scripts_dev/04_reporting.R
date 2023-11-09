@@ -46,6 +46,16 @@ reporting_tbl <- get_reporting_data_from_bq()
 
 reporting_tbl %>% glimpse()
 
+# reporting_tbl %>% 
+#     filter(occupancy_date >= Sys.Date()) %>% 
+#     filter(capacity_type_id == "2") %>% 
+#     pull(pred_occupied) %>% 
+#     sum()
+# 
+# reporting_tbl %>% 
+#     filter(occupancy_date >= Sys.Date()) %>% 
+#     summarise(n = n_distinct(occupancy_date), .by = pkey) %>% 
+#     View()
 
 # *****************************************************************************
 # **** ----

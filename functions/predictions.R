@@ -5,7 +5,10 @@ function(table_name) {
     con <- get_bigquery_connection(dataset = "data_features")
     
     # get shelter features
-    shelter_forecast_features_tbl <- dplyr::tbl(con, "shelter_occupancy_forecast_features") %>% 
+    shelter_forecast_features_tbl <- dplyr::tbl(
+        con, 
+        "shelter_occupancy_forecast_features"
+    ) %>% 
         collect() %>% 
         mutate(occupancy_date = lubridate::ymd(occupancy_date)) %>% 
         rename(
@@ -26,7 +29,9 @@ function(table_name) {
     ) %>% 
         collect() %>% 
         filter(date >= Sys.Date()) %>% 
-        distinct()
+        distinct() %>% 
+        slice(1, .by = date)
+    
     
     # distinct shelter forecast dates
     weather_forecast_tbl_2 <- tibble(

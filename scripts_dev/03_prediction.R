@@ -32,7 +32,10 @@ get_prediction_features_from_bq <- function(table_name) {
     con <- get_bigquery_connection(dataset = "data_features")
     
     # get shelter features
-    shelter_forecast_features_tbl <- dplyr::tbl(con, "shelter_occupancy_forecast_features") %>% 
+    shelter_forecast_features_tbl <- dplyr::tbl(
+        con, 
+        "shelter_occupancy_forecast_features"
+    ) %>% 
         collect() %>% 
         mutate(occupancy_date = lubridate::ymd(occupancy_date)) %>% 
         rename(
@@ -53,7 +56,9 @@ get_prediction_features_from_bq <- function(table_name) {
     ) %>% 
         collect() %>% 
         filter(date >= Sys.Date()) %>% 
-        distinct()
+        distinct() %>% 
+        slice(1, .by = date)
+    
     
     # distinct shelter forecast dates
     weather_forecast_tbl_2 <- tibble(
@@ -199,7 +204,7 @@ pred_data_processed_list <- get_prediction_recipes(pred_features_combined_tbl)
 
 get_predictions <- function(list) {
     
-    # LOAD MODELS / MAKE PREDICTIONs
+    # LOAD MODELS / MAKE PREDICTIONS
     
     # * Prob Model
     pred_tbl_prob <- h2o.loadModel(
@@ -319,6 +324,4 @@ dump(
     append = FALSE
 )
 
-h2o.loadModel(
-    "../artifacts/h2o_artifacts_v1/reg/StackedEnsemble_BestOfFamily_1_AutoML_2_20231026_61754"
-)
+
