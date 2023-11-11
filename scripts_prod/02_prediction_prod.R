@@ -74,3 +74,6 @@ get_bigquery_upload(
     table   = "shelter_occupancy_predictions",
     write_disposition = "WRITE_APPEND"
 )
+
+
+

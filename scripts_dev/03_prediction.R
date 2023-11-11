@@ -208,7 +208,7 @@ get_predictions <- function(list) {
     
     # * Prob Model
     pred_tbl_prob <- h2o.loadModel(
-        "../artifacts/h2o_artifacts_v1/prob/StackedEnsemble_AllModels_1_AutoML_1_20231026_60055"
+        "../artifacts/h2o_artifacts_v2/prob/StackedEnsemble_AllModels_1_AutoML_2_20231110_185951"
     ) %>% 
         h2o.predict(newdata = list[[1]]) %>% 
         as_tibble() %>% 
@@ -216,7 +216,7 @@ get_predictions <- function(list) {
     
     # * Reg Model
     pred_tbl_reg <- h2o.loadModel(
-        "../artifacts/h2o_artifacts_v1/reg/StackedEnsemble_BestOfFamily_1_AutoML_2_20231026_61754"
+        "../artifacts/h2o_artifacts_v2/reg/StackedEnsemble_BestOfFamily_1_AutoML_3_20231110_191540"
     ) %>% 
         h2o.predict(newdata = list[[2]]) %>% 
         as_tibble() %>% 
@@ -303,8 +303,8 @@ get_bigquery_upload(
     values  = predictions_final_tbl,
     project = "toronto-shelter-project",
     dataset = "data_pred",
-    table   = "data_predictions",
-    write_disposition = "WRITE_TRUNCATE"
+    table   = "shelter_occupancy_predictions",
+    write_disposition = "WRITE_APPEND"
 )
 
 # *****************************************************************************
