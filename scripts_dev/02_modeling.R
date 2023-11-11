@@ -50,9 +50,6 @@ shelter_occupancy_tbl <- dplyr::tbl(con, "shelter_occupancy_weather_integration_
 
 shelter_occupancy_tbl %>% glimpse()
 
-min(shelter_occupancy_tbl$occupancy_date)
-max(shelter_occupancy_tbl$occupancy_date)
-
 
 # *****************************************************************************
 # **** ----
@@ -61,13 +58,13 @@ max(shelter_occupancy_tbl$occupancy_date)
 
 # * Top Orgs by Location ----
 # - checking to see what organization has the highest number of distinct locations
-shelter_occupancy_tbl %>% 
-  filter(occupancy_date >= as.Date("2022-10-01")) %>% 
-    summarise(
-        n   = n_distinct(location_id),
-        .by = c(organization_name, organization_id)
-    ) %>% 
-    arrange(desc(n))
+# shelter_occupancy_tbl %>% 
+#   filter(occupancy_date >= as.Date("2022-10-01")) %>% 
+#     summarise(
+#         n   = n_distinct(location_id),
+#         .by = c(organization_name, organization_id)
+#     ) %>% 
+#     arrange(desc(n))
 
 # - city of toronto, homes first society and dixon hall have the most locations
 # - we'll focus on modeling/predicting shelter occupancy for these 3 organizations
@@ -77,7 +74,7 @@ shelter_occupancy_tbl %>%
 # FILTER DOWN DATA FOR TESTING ----
 # *****************************************************************************
 
-# * Filter for Org 1 ----
+# * Filter for Org 1, 15 and 6 ----
 analysis_cohort_tbl <- shelter_occupancy_tbl %>% 
     filter(organization_id %in% c(1, 15, 6)) %>% 
     filter(model_cohort_adj == 1)
@@ -134,11 +131,6 @@ get_automl_recipes <- function(data, prob = TRUE) {
   }
   
   recipe_spec <- formula %>% 
-    # update_role(x_id, new_role = "indicator") %>% 
-    # step_mutate(capacity_type = case_when(
-    #   str_detect(tolower(capacity_type), "bed") ~ "Bed",
-    #   TRUE                                      ~ "Room"
-    # ) %>% as_factor) %>% 
     step_novel(all_nominal(), -all_outcomes()) %>% 
     step_zv(all_predictors()) %>% 
     step_timeseries_signature(occupancy_date) %>% 
@@ -153,10 +145,7 @@ get_automl_recipes <- function(data, prob = TRUE) {
       step_rm(occupancy_rate)
   }
   
-  # recipe_spec <- recipe_spec %>% prep()
-    
   return(recipe_spec)
-  
   
 }
 
@@ -176,7 +165,7 @@ recipe_spec_reg <- get_automl_recipes(train_raw_tbl, prob = FALSE)
 h2o.init()
 
 # * H2o AutoML ----
-get_automl_models <- function(recipe, train_data, test_data, mrspm = 300, 
+get_automl_models <- function(recipe, train_data, test_data, mrspm = 60, 
                               seed = 123, prob = TRUE) {
   
   # data processing
@@ -248,19 +237,19 @@ automl_output_list_reg[[1]]
 # *****************************************************************************
 
 # * Prob ----
-h2o.getModel("StackedEnsemble_AllModels_1_AutoML_1_20231026_60055") %>% 
-  h2o.saveModel(path = "../artifacts/h2o_artifacts_v1/prob/")
+h2o.getModel("StackedEnsemble_AllModels_1_AutoML_2_20231110_185951") %>% 
+  h2o.saveModel(path = "../artifacts/h2o_artifacts_v2/prob/")
 
 automl_output_list_prob %>% 
-  write_rds("../artifacts/h2o_artifacts_v1/prob/prob_list.rds")
+  write_rds("../artifacts/h2o_artifacts_v2/prob/prob_list.rds")
 
 
 # * Reg ----
-h2o.getModel("StackedEnsemble_BestOfFamily_1_AutoML_2_20231026_61754") %>% 
-  h2o.saveModel(path = "../artifacts/h2o_artifacts_v1/reg/")
+h2o.getModel("StackedEnsemble_BestOfFamily_1_AutoML_3_20231110_191540") %>% 
+  h2o.saveModel(path = "../artifacts/h2o_artifacts_v2/reg/")
 
 automl_output_list_reg %>% 
-  write_rds("../artifacts/h2o_artifacts_v1/reg/reg_list.rds")
+  write_rds("../artifacts/h2o_artifacts_v2/reg/reg_list.rds")
 
 
 
