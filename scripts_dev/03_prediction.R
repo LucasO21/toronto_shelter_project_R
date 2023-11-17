@@ -32,7 +32,10 @@ get_prediction_features_from_bq <- function(table_name) {
     con <- get_bigquery_connection(dataset = "data_features")
     
     # get shelter features
-    shelter_forecast_features_tbl <- dplyr::tbl(con, "shelter_occupancy_forecast_features") %>% 
+    shelter_forecast_features_tbl <- dplyr::tbl(
+        con, 
+        "shelter_occupancy_forecast_features"
+    ) %>% 
         collect() %>% 
         mutate(occupancy_date = lubridate::ymd(occupancy_date)) %>% 
         rename(
@@ -44,7 +47,22 @@ get_prediction_features_from_bq <- function(table_name) {
         mutate(occupancy_rate = ifelse(occupancy_rate == 100, "Yes", "No") %>% as.factor()) %>% 
         mutate_if(is_character, as_factor) %>% 
         filter(organization_id %in% c(1, 15, 6)) %>% 
-        mutate(across(ends_with("_id"), as.factor))
+        mutate(across(ends_with("_id"), as.factor)) %>% 
+        distinct()
+    
+    # Count Pkeys
+    pkey_count = shelter_forecast_features_tbl %>% 
+        count(pkey, sort = TRUE) %>% 
+        mutate(flag = ifelse(n > 5, 1, 0))
+    
+    # Flag Locations with Name Change
+    pkey_flag_list = pkey_count %>% 
+        filter(flag == 1) %>% 
+        pull(pkey)
+    
+    # Exclude Locations with Name Change
+    shelter_forecast_features_tbl <- shelter_forecast_features_tbl %>% 
+        filter(!pkey %in% pkey_flag_list)
     
     # get weather features
     weather_forecast_tbl <- dplyr::tbl(
@@ -53,7 +71,9 @@ get_prediction_features_from_bq <- function(table_name) {
     ) %>% 
         collect() %>% 
         filter(date >= Sys.Date()) %>% 
-        distinct()
+        distinct() %>% 
+        slice(1, .by = date)
+    
     
     # distinct shelter forecast dates
     weather_forecast_tbl_2 <- tibble(
@@ -199,11 +219,11 @@ pred_data_processed_list <- get_prediction_recipes(pred_features_combined_tbl)
 
 get_predictions <- function(list) {
     
-    # LOAD MODELS / MAKE PREDICTIONs
+    # LOAD MODELS / MAKE PREDICTIONS
     
     # * Prob Model
     pred_tbl_prob <- h2o.loadModel(
-        "../artifacts/h2o_artifacts_v1/prob/StackedEnsemble_AllModels_1_AutoML_1_20231026_60055"
+        "../artifacts/h2o_artifacts_v2/prob/StackedEnsemble_AllModels_1_AutoML_2_20231110_185951"
     ) %>% 
         h2o.predict(newdata = list[[1]]) %>% 
         as_tibble() %>% 
@@ -211,7 +231,7 @@ get_predictions <- function(list) {
     
     # * Reg Model
     pred_tbl_reg <- h2o.loadModel(
-        "../artifacts/h2o_artifacts_v1/reg/StackedEnsemble_BestOfFamily_1_AutoML_2_20231026_61754"
+        "../artifacts/h2o_artifacts_v2/reg/StackedEnsemble_BestOfFamily_1_AutoML_3_20231110_191540"
     ) %>% 
         h2o.predict(newdata = list[[2]]) %>% 
         as_tibble() %>% 
@@ -287,6 +307,10 @@ predictions_final_tbl <- get_predictions_formatted(
     pred_data = predictions_tbl
 )
 
+predictions_final_tbl %>% 
+    filter(location_id == "1155") %>% 
+    filter(occupancy_date == Sys.Date())
+
 
 # *****************************************************************************
 # **** ----
@@ -298,8 +322,8 @@ get_bigquery_upload(
     values  = predictions_final_tbl,
     project = "toronto-shelter-project",
     dataset = "data_pred",
-    table   = "data_predictions",
-    write_disposition = "WRITE_TRUNCATE"
+    table   = "shelter_occupancy_predictions",
+    write_disposition = "WRITE_APPEND"
 )
 
 # *****************************************************************************
@@ -319,6 +343,7 @@ dump(
     append = FALSE
 )
 
-h2o.loadModel(
-    "../artifacts/h2o_artifacts_v1/reg/StackedEnsemble_BestOfFamily_1_AutoML_2_20231026_61754"
-)
+predictions_final_tbl %>% 
+    filter(pkey == "1-59-1155-15673-1-1-1-1-1") %>% 
+    View()
+

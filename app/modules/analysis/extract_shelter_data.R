@@ -1,7 +1,3 @@
-
-# library(bigrquery)
-# bq_auth(path = "../../toronto-shelter-project-11204c698551.json")
-
 get_shelter_data <-
 function(year = 2023) {
     
@@ -51,14 +47,19 @@ function(year = 2023) {
         stop("No data extracted! Check data chunk", call. = FALSE)
     }
     
-    # Filter Date > Max Date
-    output <- df %>% filter(occupancy_date > max_date - 1)
+    # Check: New Data
+    if (max(df$occupancy_date) == max_date) {
+        stop("Max occupancy date from API matches max data in BigQuery", call. = FALSE)
+    }
+    
+    # Filter API Data > Max Occupancy Date in BQ
+    output <- df %>% filter(occupancy_date > max_date)
 
     
     # Metadata
     mtd <- str_glue(
         "Metadata (Open Data Toronto API):
-            Last Raw Data Extract Date: {Sys.Date()}
+            Last Extract Date: {Sys.time()}
             Date Range for New Data Extact: {min(output$occupancy_date)} - {max(output$occupancy_date)}
             Max Date in Big Query: {max_date}
             New Data Rows: {nrow(output)}
@@ -122,10 +123,10 @@ function(values,
     mtd <- stringr::str_glue(
             "
             {mtd_title}
-            Job Status: {job$status}
-            Job ID: {job$jobReference$jobId}
-            Job Creation Time: {job_time$creation_time}
-            Job Start Time: {job_time$start_time}
+                Job Status: {job$status}
+                Job ID: {job$jobReference$jobId}
+                Job Creation Time: {job_time$creation_time}
+                Job Start Time: {job_time$start_time}
             "
         )
     

@@ -33,11 +33,14 @@ get_reporting_data_from_bq <- function() {
     # Prediction Data
     reporting_tbl <- dplyr::tbl(
         get_bigquery_connection(dataset = "data_pred"),
-        "shelter_occupancy_predictions_distinct"
+        "shelter_occupancy_prediction_distinct"
     ) %>% 
         collect() %>% 
-        distinct()
+        filter(occupancy_date >= Sys.Date()) %>% 
+        filter(pred_rank == 1) %>% 
+        mutate(pred_time = lubridate::with_tz(pred_time))
     
+    # Return
     return(reporting_tbl)
     
 }
@@ -46,6 +49,16 @@ reporting_tbl <- get_reporting_data_from_bq()
 
 reporting_tbl %>% glimpse()
 
+# reporting_tbl %>% 
+#     filter(occupancy_date >= Sys.Date()) %>% 
+#     filter(capacity_type_id == "2") %>% 
+#     pull(pred_occupied) %>% 
+#     sum()
+# 
+# reporting_tbl %>% 
+#     filter(occupancy_date >= Sys.Date()) %>% 
+#     summarise(n = n_distinct(occupancy_date), .by = pkey) %>% 
+#     View()
 
 # *****************************************************************************
 # **** ----
