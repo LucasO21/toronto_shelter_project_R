@@ -47,7 +47,22 @@ get_prediction_features_from_bq <- function(table_name) {
         mutate(occupancy_rate = ifelse(occupancy_rate == 100, "Yes", "No") %>% as.factor()) %>% 
         mutate_if(is_character, as_factor) %>% 
         filter(organization_id %in% c(1, 15, 6)) %>% 
-        mutate(across(ends_with("_id"), as.factor))
+        mutate(across(ends_with("_id"), as.factor)) %>% 
+        distinct()
+    
+    # Count Pkeys
+    pkey_count = shelter_forecast_features_tbl %>% 
+        count(pkey, sort = TRUE) %>% 
+        mutate(flag = ifelse(n > 5, 1, 0))
+    
+    # Flag Locations with Name Change
+    pkey_flag_list = pkey_count %>% 
+        filter(flag == 1) %>% 
+        pull(pkey)
+    
+    # Exclude Locations with Name Change
+    shelter_forecast_features_tbl <- shelter_forecast_features_tbl %>% 
+        filter(!pkey %in% pkey_flag_list)
     
     # get weather features
     weather_forecast_tbl <- dplyr::tbl(
@@ -292,6 +307,10 @@ predictions_final_tbl <- get_predictions_formatted(
     pred_data = predictions_tbl
 )
 
+predictions_final_tbl %>% 
+    filter(location_id == "1155") %>% 
+    filter(occupancy_date == Sys.Date())
+
 
 # *****************************************************************************
 # **** ----
@@ -324,4 +343,7 @@ dump(
     append = FALSE
 )
 
+predictions_final_tbl %>% 
+    filter(pkey == "1-59-1155-15673-1-1-1-1-1") %>% 
+    View()
 

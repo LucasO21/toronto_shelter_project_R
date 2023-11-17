@@ -300,17 +300,19 @@ server <- function(input, output) {
       
        tbl <- get_reporting_data_from_bq() %>% 
          #reporting_tbl %>% 
-           select(-c(pkey)) %>% 
-           mutate(loc_info = paste(location_id, ": ", location_name), .before = shelter_id) %>% 
-           mutate(org_info = paste(organization_id, ": ", organization_name), .before = shelter_id) %>% 
-           mutate(prog_info = paste(program_id, ": ", program_name), .before = shelter_id) %>% 
-           mutate(fmt = case_when(
-               pred_occupancy_rate_adj <= 0.80 ~ "green",
-               pred_occupancy_rate_adj <= 0.90 ~ "orange",
-               TRUE                            ~ "red"
-           )) %>% 
-         filter(occupancy_date >= Sys.Date())
-       
+         select(-c(pkey)) %>% 
+         mutate(loc_info = paste(location_id, ": ", location_name), .before = shelter_id) %>% 
+         mutate(org_info = paste(organization_id, ": ", organization_name), .before = shelter_id) %>% 
+         mutate(prog_info = paste(program_id, ": ", program_name), .before = shelter_id) %>% 
+         mutate(fmt = case_when(
+             pred_occupancy_rate_adj <= 0.80 ~ "green",
+             pred_occupancy_rate_adj <= 0.90 ~ "orange",
+             TRUE                            ~ "red"
+         ))
+         # filter(occupancy_date >= Sys.Date()) %>% 
+         # mutate(pred_time = lubridate::with_tz(pred_time)) %>% 
+         # filter(pred_time == max(pred_time)) 
+
        tbl_2 <- tbl %>% 
          left_join(
            tbl %>% 

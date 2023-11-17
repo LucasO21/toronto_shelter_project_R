@@ -7,8 +7,11 @@ function() {
         "shelter_occupancy_prediction_distinct"
     ) %>% 
         collect() %>% 
-        distinct()
+        filter(occupancy_date >= Sys.Date()) %>% 
+        filter(pred_rank == 1) %>% 
+        mutate(pred_time = lubridate::with_tz(pred_time))
     
+    # Return
     return(reporting_tbl)
     
 }
