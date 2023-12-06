@@ -26,7 +26,7 @@ source(file = "../functions/modeling.R")
 # *****************************************************************************
 
 # * Get Data ----
-get_prediction_features_from_bq <- function(table_name) {
+get_prediction_features_from_bq <- function() {
     
     # con
     con <- get_bigquery_connection(dataset = "data_features")
@@ -106,16 +106,17 @@ get_prediction_features_from_bq <- function(table_name) {
 
     
     # message
-    message(str_glue(
-        "shelter pred data info:
-            min date: {min(shelter_forecast_features_tbl$occupancy_date)}
-            max date: {max(shelter_forecast_features_tbl$occupancy_date)}
-        
-        weather forecast data info:
-            min date: {min(weather_forecast_tbl_final$date)}
-            max date: {max(weather_forecast_tbl_final$date)}
-        "
-    ))
+    # message(str_glue(
+    #     "shelter pred data info:
+    #         min date: {min(shelter_forecast_features_tbl$occupancy_date)}
+    #         max date: {max(shelter_forecast_features_tbl$occupancy_date)}
+    #     
+    #     weather forecast data info:
+    #         min date: {min(weather_forecast_tbl_final$date)}
+    #         max date: {max(weather_forecast_tbl_final$date)}
+    #     "
+    # ))
+    message(str_glue("Data pull from BigQuery - Complete!"))
     
     # return
     return(
@@ -148,6 +149,10 @@ get_prediction_features_combined <- function(shelter_features, weather_features)
             #relationship = "one-to-many"
         )
     
+    # Message
+    message(str_glue("Combine data - Complete!"))
+    
+    # Return
     return(ret)
 }
 
@@ -162,8 +167,9 @@ pred_features_combined_tbl <- get_prediction_features_combined(
     mutate(across(ends_with("_id"), ~ as.factor(.)))
 
 # pred_features_combined_tbl %>% glimpse()
-# 
+
 # pred_features_combined %>% sapply(function(x) sum(is.na(x)))
+
 
 
 # *****************************************************************************
@@ -199,6 +205,8 @@ get_prediction_recipes <- function(data) {
         stop("Data processing for prob_tbl failed.", call. = FALSE)
     }
     
+    # Message
+    message(str_glue("Data processing - Complete!"))
     
     # return
     return(
@@ -241,6 +249,9 @@ get_predictions <- function(list) {
     # * Combine 
     ret <- bind_cols(pred_tbl_prob, pred_tbl_reg)
     
+    # Message
+    message(str_glue("Make predictions - Complete!"))
+    
     # return
     return(ret)
     
@@ -253,6 +264,8 @@ predictions_tbl <- get_predictions(pred_data_processed_list)
 # **** ----
 # FORMAT PREDICTIONS ----
 # *****************************************************************************
+pred_data %>% glimpse()
+raw_data %>% glimpse()
 
 get_predictions_formatted <- function(raw_data, pred_data) {
     
@@ -264,7 +277,6 @@ get_predictions_formatted <- function(raw_data, pred_data) {
     
     # Data Formatted
     ret <- raw_data %>% 
-        # select(occupancy_date, location_id, capacity_actual) %>% 
         bind_cols(pred_data) %>% 
         rename(pred_capacity_actual = capacity_actual) %>% 
         rename(pred_fully_occupied = pred_occupancy_rate) %>% 
@@ -292,10 +304,11 @@ get_predictions_formatted <- function(raw_data, pred_data) {
         # ) 
     
     # Message
-    message(str_glue(
-        "prediction range: {min(ret$occupancy_date)} - {max(ret$occupancy_date)}
-        prediction time: {unique(ret$pred_time)}"
-    ))
+    # message(str_glue(
+    #     "prediction range: {min(ret$occupancy_date)} - {max(ret$occupancy_date)}
+    #     prediction time: {unique(ret$pred_time)}"
+    # ))
+    message(str_glue("Format predictions - Complete!"))
     
     # Return
     return(ret)
@@ -310,6 +323,37 @@ predictions_final_tbl <- get_predictions_formatted(
 predictions_final_tbl %>% 
     filter(location_id == "1155") %>% 
     filter(occupancy_date == Sys.Date())
+
+
+# *****************************************************************************
+# **** ----
+# FINAL PREDICTION FUNCTION ----
+# *****************************************************************************
+get_final_predictions <- function() {
+    
+    # Get Data from BiqQuery
+    data_1 <- get_prediction_features_from_bq()
+    
+    # Combine Data
+    data_2 <- get_prediction_features_combined(data_1[[1]], data_1[[2]])
+    
+    # Data Processing
+    data_3 <- get_prediction_recipes(data_2)
+    
+    # Make Predictions
+    data_4 <- get_predictions(data_3)
+    
+    # Format Predictions
+    data <- get_predictions_formatted(data_1[[1]], data_4)
+    
+    # Message
+    message(str_glue("Prediction workflow - Complete"))
+    
+    # Return
+    return(data)
+}
+
+predictions_final_tbl <- get_final_predictions()
 
 
 # *****************************************************************************
@@ -343,7 +387,4 @@ dump(
     append = FALSE
 )
 
-predictions_final_tbl %>% 
-    filter(pkey == "1-59-1155-15673-1-1-1-1-1") %>% 
-    View()
 
