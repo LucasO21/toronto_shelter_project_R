@@ -7,7 +7,6 @@ function() {
         "shelter_occupancy_prediction_distinct"
     ) %>% 
         collect() %>% 
-        filter(location_id == "1155") %>% 
         filter(occupancy_date >= Sys.Date()) %>% 
         filter(pred_rank == 1) %>% 
         mutate(pred_time = lubridate::with_tz(pred_time))

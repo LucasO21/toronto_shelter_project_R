@@ -148,13 +148,21 @@ get_bigquery_upload <- function(values,
     )
     
     # Perform upload
-    job <- bigrquery::insert_upload_job(
-        values  = values,
-        project = project,
-        dataset = dataset,
-        table   = table,
+    # job <- bigrquery::insert_upload_job(
+    #     values  = values,
+    #     project = project,
+    #     dataset = dataset,
+    #     table   = table,
+    #     create_disposition = create_disposition,
+    #     write_disposition  = write_disposition
+    # )
+    
+    job <- bigrquery::bq_perform_upload(
+        x = bq_table(project = project, dataset = dataset, table = table),
+        values = values,
+        write_disposition = write_disposition,
         create_disposition = create_disposition,
-        write_disposition  = write_disposition
+        quiet = FALSE
     )
     
     # Message

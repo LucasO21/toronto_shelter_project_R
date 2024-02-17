@@ -1,5 +1,5 @@
 get_prediction_features_from_bq <-
-function(table_name) {
+function() {
     
     # con
     con <- get_bigquery_connection(dataset = "data_features")
@@ -79,16 +79,17 @@ function(table_name) {
 
     
     # message
-    message(str_glue(
-        "shelter pred data info:
-            min date: {min(shelter_forecast_features_tbl$occupancy_date)}
-            max date: {max(shelter_forecast_features_tbl$occupancy_date)}
-        
-        weather forecast data info:
-            min date: {min(weather_forecast_tbl_final$date)}
-            max date: {max(weather_forecast_tbl_final$date)}
-        "
-    ))
+    # message(str_glue(
+    #     "shelter pred data info:
+    #         min date: {min(shelter_forecast_features_tbl$occupancy_date)}
+    #         max date: {max(shelter_forecast_features_tbl$occupancy_date)}
+    #     
+    #     weather forecast data info:
+    #         min date: {min(weather_forecast_tbl_final$date)}
+    #         max date: {max(weather_forecast_tbl_final$date)}
+    #     "
+    # ))
+    message(str_glue("Data pull from BigQuery - Complete!"))
     
     # return
     return(
@@ -109,6 +110,10 @@ function(shelter_features, weather_features) {
             #relationship = "one-to-many"
         )
     
+    # Message
+    message(str_glue("Combine data - Complete!"))
+    
+    # Return
     return(ret)
 }
 get_prediction_recipes <-
@@ -139,6 +144,8 @@ function(data) {
         stop("Data processing for prob_tbl failed.", call. = FALSE)
     }
     
+    # Message
+    message(str_glue("Data processing - Complete!"))
     
     # return
     return(
@@ -174,6 +181,9 @@ function(list) {
     # * Combine 
     ret <- bind_cols(pred_tbl_prob, pred_tbl_reg)
     
+    # Message
+    message(str_glue("Make predictions - Complete!"))
+    
     # return
     return(ret)
     
@@ -189,7 +199,6 @@ function(raw_data, pred_data) {
     
     # Data Formatted
     ret <- raw_data %>% 
-        # select(occupancy_date, location_id, capacity_actual) %>% 
         bind_cols(pred_data) %>% 
         rename(pred_capacity_actual = capacity_actual) %>% 
         rename(pred_fully_occupied = pred_occupancy_rate) %>% 
@@ -217,10 +226,11 @@ function(raw_data, pred_data) {
         # ) 
     
     # Message
-    message(str_glue(
-        "prediction range: {min(ret$occupancy_date)} - {max(ret$occupancy_date)}
-        prediction time: {unique(ret$pred_time)}"
-    ))
+    # message(str_glue(
+    #     "prediction range: {min(ret$occupancy_date)} - {max(ret$occupancy_date)}
+    #     prediction time: {unique(ret$pred_time)}"
+    # ))
+    message(str_glue("Format predictions - Complete!"))
     
     # Return
     return(ret)

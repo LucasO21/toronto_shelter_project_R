@@ -130,9 +130,11 @@ get_prediction_features_from_bq <- function() {
 
 pred_features_data_list <- get_prediction_features_from_bq()
 
-# pred_features_data_list[[1]] %>% glimpse()
-# 
-# pred_features_data_list[[2]]
+pred_features_data_list[[1]] %>% glimpse()
+
+pred_features_data_list[[1]] %>% distinct(occupancy_date) %>% arrange(occupancy_date)
+
+pred_features_data_list[[2]]
 
 # *****************************************************************************
 # **** ----

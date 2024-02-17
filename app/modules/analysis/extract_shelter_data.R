@@ -12,7 +12,7 @@ function(year = 2023) {
     
     max_date <- max_date %>% pull() %>% as.Date()
 
-    # Info (Open Data API)
+    # Oped Data API Info
     info <- show_package("21c83b32-d5a8-4106-a54f-010dbe49f6f2") %>% 
         list_package_resources() %>% 
         filter(str_to_lower(format) %in% c("csv", "geojson")) %>% 
@@ -37,40 +37,42 @@ function(year = 2023) {
     }
     
     # Data Extract (Open Data API)
-    df <- info %>% 
+    data <- info %>% 
         get_resource() %>% 
         janitor::clean_names() %>% 
         mutate(occupancy_date = lubridate::ymd(occupancy_date))
     
     # Data Check
-    if (is.null(df) || length(df) == 0) {
+    if (is.null(data) || length(data) == 0) {
         stop("No data extracted! Check data chunk", call. = FALSE)
     }
     
     # Check: New Data
-    if (max(df$occupancy_date) == max_date) {
+    if (max(data$occupancy_date) == max_date) {
         stop("Max occupancy date from API matches max data in BigQuery", call. = FALSE)
     }
     
     # Filter API Data > Max Occupancy Date in BQ
-    output <- df %>% filter(occupancy_date > max_date)
+    ret <- data %>% 
+        filter(occupancy_date > max_date) %>% 
+        mutate(extract_date = Sys.time())
 
-    
     # Metadata
-    mtd <- str_glue(
-        "Metadata (Open Data Toronto API):
-            Last Extract Date: {Sys.time()}
-            Date Range for New Data Extact: {min(output$occupancy_date)} - {max(output$occupancy_date)}
-            Max Date in Big Query: {max_date}
-            New Data Rows: {nrow(output)}
-            New Data Cols: {ncol(output)}
-        "
-    )
+    # mtd <- str_glue(
+    #     "Metadata (Open Data Toronto API):
+    #         Last Extract Date: {Sys.time()}
+    #         Date Range for New Data Extact: {min(output$occupancy_date)} - {max(output$occupancy_date)}
+    #         Max Date in Big Query: {max_date}
+    #         New Data Rows: {nrow(output)}
+    #         New Data Cols: {ncol(output)}
+    #     "
+    # )
     
     # Message
-    message(mtd)
-
-    return(list(data = output, metadata = mtd))
+    message(str_glue("Raw shelter data extract - Complete!"))
+    
+    # Return
+    return(ret)
 
 }
 get_bigquery_upload <-
@@ -92,13 +94,21 @@ function(values,
     )
     
     # Perform upload
-    job <- bigrquery::insert_upload_job(
-        values  = values,
-        project = project,
-        dataset = dataset,
-        table   = table,
+    # job <- bigrquery::insert_upload_job(
+    #     values  = values,
+    #     project = project,
+    #     dataset = dataset,
+    #     table   = table,
+    #     create_disposition = create_disposition,
+    #     write_disposition  = write_disposition
+    # )
+    
+    job <- bigrquery::bq_perform_upload(
+        x = bq_table(project = project, dataset = dataset, table = table),
+        values = values,
+        write_disposition = write_disposition,
         create_disposition = create_disposition,
-        write_disposition  = write_disposition
+        quiet = FALSE
     )
     
     # Message
@@ -146,5 +156,15 @@ function (project = "toronto-shelter-project",
         billing = project  
     )
     
+    # Message
+    if (!is.null(con)) {
+        msg = "BiqQuery connection - Complete"
+    } else {
+        msg = "No BiqQuery connection established"
+    }
+    
+    message(str_glue(msg))
+    
+    # Message
     return(con)
 }
